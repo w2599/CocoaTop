@@ -1,4 +1,3 @@
-THEOS_PACKAGE_SCHEME=rootless
 
 ARCHS = arm64e
 TARGET = iphone:clang:13.7:6.0
