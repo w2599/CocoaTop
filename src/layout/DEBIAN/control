@@ -1,7 +1,7 @@
 Package: zp.cocoatop64
-Name: CocoaTop64
+Name: CocoaTop64 - rootless
 Depends: 
-Conflicts: ru.domo.cocoatop
+Conflicts: ru.domo.cocoatop , ru.domo.cocoatop64
 Version: 2.2.4
 Architecture: iphoneos-arm
 Description: Process Viewer for iOS GUI, updated for iOS 15 by zp.

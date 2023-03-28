@@ -1,4 +1,3 @@
-THEOS_PACKAGE_SCHEME=rootless
 THEOS_DEVICE_IP = 192.168.31.158
 
 ARCHS = arm64e
@@ -18,6 +17,8 @@ include $(THEOS_MAKE_PATH)/application.mk
 SUBPROJECTS = postinst
 include $(THEOS_MAKE_PATH)/aggregate.mk
 
-#before-package::
-#	@cp .theos/obj/five/CocoaTop.app/CocoaTop .theos/_/Applications/CocoaTop.app/CocoaTop5
-#	@cp .theos/obj/six/CocoaTop.app/CocoaTop .theos/_/Applications/CocoaTop.app/CocoaTop6
+clean ::
+	rm -rf .theos
+	rm -rf packages
+	
+	
