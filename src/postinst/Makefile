@@ -1,5 +1,7 @@
-ARCHS = armv7 arm64
-TARGET = iphone:clang:13.0:6.0
+THEOS_PACKAGE_SCHEME=rootless
+
+ARCHS = arm64e
+TARGET = iphone:clang:13.7:6.0
 include $(THEOS)/makefiles/common.mk
 
 TOOL_NAME = postinst

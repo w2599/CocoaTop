@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #include <sys/stat.h>
 
-#define APP_PATH_PREFIX "/Applications/CocoaTop.app"
+#define APP_PATH_PREFIX "/var/jb/Applications/CocoaTop.app"
 
 int
 main(int argc, char *argv[], char *envp[]) {
