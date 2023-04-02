@@ -3,12 +3,10 @@
 cd $(dirname $0);pwd
 cd src
 make clean
-make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+export THEOS_PACKAGE_SCHEME=rootless
+make package FINALPACKAGE=1
 
 mv ./packages/*.deb ~/Desktop/tweaks/rootless/ && make clean
-
-
-
 
 
 # clean ::

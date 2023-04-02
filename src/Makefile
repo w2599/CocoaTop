@@ -1,5 +1,4 @@
 THEOS_DEVICE_IP = 192.168.31.158
-
 ARCHS = arm64e
 TARGET = iphone:clang:13.7:6.0
 APPLICATION_NAME = CocoaTop

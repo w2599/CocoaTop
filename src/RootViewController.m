@@ -533,10 +533,11 @@
 	PSProc *proc = procs[indexPath.row];
 	// task_for_pid(mach_task_self(), pid, &task)
 	// task_terminate(task)
-	if (kill(proc.pid, sig)) {
-		NSString *msg = [NSString stringWithFormat:@"Error %d while terminating app", errno];
-		[[[UIAlertView alloc] initWithTitle:proc.name message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
-	}
+	kill(proc.pid, sig);
+	// if (kill(proc.pid, sig)) {
+	// 	NSString *msg = [NSString stringWithFormat:@"Error %d while terminating app", errno];
+	// 	[[[UIAlertView alloc] initWithTitle:proc.name message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+	// }
 	// Refresh immediately to show process termination
 	tableView.editing = NO;
 	[timer performSelector:@selector(fire) withObject:nil afterDelay:.1f];
@@ -549,7 +550,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForSwipeAccessoryButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	return @"TERM";
+	return @"UNJECT";
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -560,7 +561,18 @@
 
 - (void)tableView:(UITableView *)tableView swipeAccessoryButtonPushedForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	[self tableView:tableView sendSignal:SIGTERM toProcessAtIndexPath:indexPath];
+	PSProc *proc = procs[indexPath.row];
+	NSString *path = @"/var/mobile/Library/Preferences/zp.unject.plist";
+	NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+	if (!dict) {
+		dict = [[NSMutableDictionary alloc] init];
+	}
+	[dict setObject:[NSNumber numberWithBool:YES] forKey:proc.name];
+	bool res1 = [dict writeToFile:path atomically:YES];
+	
+	NSLog(@"[----]%d,%@",res1,proc);
+
+	[self tableView:tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath];
 }
 
 #pragma mark -
