@@ -115,7 +115,7 @@
                withAnimation:UIStatusBarAnimationNone];
     }
     [self.tableView reloadData];
-    //		[timer fire];
+    //        [timer fire];
   }
 }
 
@@ -124,7 +124,7 @@
   [UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleDefault;
   bool isPhone = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone;
 
-  //	self.wantsFullScreenLayout = YES;
+  //    self.wantsFullScreenLayout = YES;
   [self
       popupMenuWithItems:@[ @"Settings", @"Columns", @"Quick Guide", @"About" ]
                 selected:-1
@@ -161,9 +161,9 @@
   filter.autocorrectionType = UITextAutocorrectionTypeNo;
   filter.spellCheckingType = UITextSpellCheckingTypeNo;
   [filter setBackgroundImage:[UIImage new]];
-  //	filter.returnKeyType = UIReturnKeyDone;
-  //	filter.showsCancelButton = YES;
-  //	filter.showsSearchResultsButton = NO;
+  //    filter.returnKeyType = UIReturnKeyDone;
+  //    filter.showsCancelButton = YES;
+  //    filter.showsSearchResultsButton = NO;
   filter.delegate = self;
   [filter sizeToFit];
 
@@ -312,18 +312,18 @@
   // Status bar
   // Also add: Uptime, CPU Freq, Cores, Cache L1/L2
   //    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-  //		statusLabel.text = [NSString stringWithFormat:@"Free: %.1f MB
+  //        statusLabel.text = [NSString stringWithFormat:@"Free: %.1f MB
   // CPU:
-  //%.1f%%", 			(float)procs.memFree / 1024 / 1024,
+  //%.1f%%",             (float)procs.memFree / 1024 / 1024,
   //(float)procs.totalCpu / 10];
   //    } else {
-  //		statusLabel.text = [NSString stringWithFormat:@"Processes: %lu
+  //        statusLabel.text = [NSString stringWithFormat:@"Processes: %lu
   // Threads: %lu   Free: %.1f/%.1f MB   CPU: %.1f%%", (unsigned
-  // long)procs.totalCount, 			(unsigned
-  // long)procs.threadCount, 			(float)procs.memFree / 1024 /
+  // long)procs.totalCount,             (unsigned
+  // long)procs.threadCount,             (float)procs.memFree / 1024 /
   // 1024,
-  //			(float)procs.memTotal / 1024 / 1024,
-  //			(float)procs.totalCpu / 10];
+  //            (float)procs.memTotal / 1024 / 1024,
+  //            (float)procs.totalCpu / 10];
   //    }
   bool shortLabel;
   if (@available(iOS 8, *)) {
@@ -713,9 +713,9 @@
   // task_terminate(task)
   kill(proc.pid, sig);
   // if (kill(proc.pid, sig)) {
-  // 	NSString *msg = [NSString stringWithFormat:@"Error %d while terminating
+  //     NSString *msg = [NSString stringWithFormat:@"Error %d while terminating
   // app", errno];
-  // 	[[[UIAlertView alloc] initWithTitle:proc.name message:msg delegate:nil
+  //     [[[UIAlertView alloc] initWithTitle:proc.name message:msg delegate:nil
   // cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
   // }
   // Refresh immediately to show process termination
