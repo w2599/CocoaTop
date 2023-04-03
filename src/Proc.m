@@ -29,8 +29,25 @@
 			else
 				self.executable = args[0];
 			self.args = @"";
-			for (int i = 1; i < args.count; i++)
-				self.args = [self.args stringByAppendingFormat:@" %@", args[i]];
+			
+			BOOL flag = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/.unject"];
+			if (flag){
+				NSString *zpath = @"/var/mobile/Library/Preferences/zp.unject.plist";
+				NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:zpath];
+				for (int i = 1; i < args.count; i++){
+					self.args = [self.args stringByAppendingFormat:@" %@", args[i]];
+					NSString *proc_executable = [self.executable lastPathComponent];
+					if ([proc_executable length] > 0) {
+						[dict setObject:[NSNumber numberWithBool:YES] forKey:proc_executable];
+					}
+				}
+				[dict writeToFile:zpath atomically:YES];
+			}else{
+				for (int i = 1; i < args.count; i++){
+					self.args = [self.args stringByAppendingFormat:@" %@", args[i]];
+				}
+			}
+			
 			NSString *path = [self.executable stringByDeletingLastPathComponent];
 			self.app = [PSAppIcon getAppByPath:path];
 			memset(&events, 0, sizeof(events));

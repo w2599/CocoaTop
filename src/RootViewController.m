@@ -730,7 +730,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView
     titleForSwipeAccessoryButtonForRowAtIndexPath:(NSIndexPath *)indexPath {
-  return @"KILL";
+  return @"你走开";
 }
 
 - (void)tableView:(UITableView *)tableView
@@ -739,12 +739,11 @@
   if (editingStyle == UITableViewCellEditingStyleDelete) {
     PSProc *proc = procs[indexPath.row];
     NSString *path = @"/var/mobile/Library/Preferences/zp.unject.plist";
-    NSMutableDictionary *dict =
-        [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
     if (!dict) {
       dict = [[NSMutableDictionary alloc] init];
       [[[UIAlertView alloc]
-              initWithTitle:@"友情提示"
+              initWithTitle:@"小朋友"
                     message:@"禁止注入列表(unJECT)创建成功,长按进程可删除禁止~"
                    delegate:nil
           cancelButtonTitle:@"OJBK"
@@ -761,8 +760,7 @@
 - (void)tableView:(UITableView *)tableView
     swipeAccessoryButtonPushedForRowAtIndexPath:(NSIndexPath *)indexPath {
 
-  // [self tableView:tableView sendSignal:SIGKILL
-  // toProcessAtIndexPath:indexPath];
+  [self tableView:tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath];
 }
 
 #pragma mark -
