@@ -2,7 +2,7 @@ Package: zp.cocoatop64.unject
 Name: CocoaTop64( unJECT )
 Depends: 
 Conflicts: ru.domo.cocoatop , ru.domo.cocoatop64 , zp.cocoatop64 , zp.cocoatop64.inject
-Version: 3.0
+Version: 3.0.1
 Architecture: iphoneos-arm
 Description: Process Viewer for iOS GUI, updated for iOS 15 by zp.
 Maintainer: zp, SXX, Domo

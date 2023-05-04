@@ -32,7 +32,7 @@
 			
 			BOOL flag = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/.unject"];
 			if (flag){
-				NSString *zpath = @"/var/mobile/Library/Preferences/zp.unject.plist";
+				NSString *zpath = @"/var/mobile/zp.unject.plist";
 				NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:zpath];
 				for (int i = 1; i < args.count; i++){
 					self.args = [self.args stringByAppendingFormat:@" %@", args[i]];

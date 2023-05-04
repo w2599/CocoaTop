@@ -227,7 +227,7 @@
 
     if (indexPath != nil) {
 
-      NSString *path = @"/var/mobile/Library/Preferences/zp.unject.plist";
+      NSString *path = @"/var/mobile/zp.unject.plist";
       NSMutableDictionary *dict =
           [[NSMutableDictionary alloc] initWithContentsOfFile:path];
       if (!dict) {
@@ -738,7 +738,7 @@
      forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
     PSProc *proc = procs[indexPath.row];
-    NSString *path = @"/var/mobile/Library/Preferences/zp.unject.plist";
+    NSString *path = @"/var/mobile/zp.unject.plist";
     NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
     if (!dict) {
       dict = [[NSMutableDictionary alloc] init];
