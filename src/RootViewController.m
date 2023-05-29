@@ -238,13 +238,18 @@
       NSString *proc_executable = [proc.executable lastPathComponent];
       [dict removeObjectForKey:proc_executable];
       [dict writeToFile:path atomically:YES];
-      [[[UIAlertView alloc] initWithTitle:proc_executable
-                                  message:@"恢复注入成功"
-                                 delegate:nil
-                        cancelButtonTitle:@"OJBK"
-                        otherButtonTitles:nil] show];
-      // [self tableView:self.tableView sendSignal:SIGKILL
-      // toProcessAtIndexPath:indexPath];
+
+      UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
+                           message:@"恢复注入成功\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
+                 preferredStyle:UIAlertControllerStyleAlert];
+
+      UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK" style:UIAlertActionStyleDefault
+                                  handler:^(UIAlertAction *_Nonnull action) {
+                                    [self tableView:self.tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath]; }];
+      UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+      [alert addAction:okAction];
+      [alert addAction:cancelAction];
+      [self presentViewController:alert animated:YES completion:nil];
     }
   }
 }
@@ -739,7 +744,8 @@
   if (editingStyle == UITableViewCellEditingStyleDelete) {
     PSProc *proc = procs[indexPath.row];
     NSString *path = @"/var/mobile/zp.unject.plist";
-    NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+    NSMutableDictionary *dict =
+        [[NSMutableDictionary alloc] initWithContentsOfFile:path];
     if (!dict) {
       dict = [[NSMutableDictionary alloc] init];
       [[[UIAlertView alloc]
@@ -754,6 +760,18 @@
       [dict setObject:[NSNumber numberWithBool:YES] forKey:proc_executable];
       [dict writeToFile:path atomically:YES];
     }
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
+                  message: @"已加入禁止注入列表\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
+                  preferredStyle:UIAlertControllerStyleAlert];
+
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK" style:UIAlertActionStyleDefault
+                                  handler:^(UIAlertAction *_Nonnull action) {
+                                    [self tableView:self.tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath]; }];
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+    [alert addAction:okAction];
+    [alert addAction:cancelAction];
+    [self presentViewController:alert animated:YES completion:nil];
   }
 }
 
