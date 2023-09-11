@@ -5,6 +5,9 @@
 #import "Sock.h"
 
 NSString *ColumnModeName[ColumnModes] = {@"Summary", @"Threads", @"Open files", @"Open ports", @"Modules"};
+NSString *messageCopy=@"";
+NSString *titleA=@"";
+NSURL *open2URL;
 
 @implementation SockViewController
 {
@@ -348,9 +351,23 @@ NSString *ColumnModeName[ColumnModes] = {@"Summary", @"Threads", @"Open files", 
 		   *message = (viewMode == ColumnModeSummary) ? [NSString stringWithFormat:@"%@\n\n%@", sock.col.getData(sock.proc),
 		   [sock.col.descr substringWithRange:NSMakeRange(0, [sock.col.descr lineRangeForRange:NSMakeRange(0,1)].length-1)]] :
 					  (viewMode == ColumnModeModules) ? sock.name : sock.description;
+	messageCopy = [(viewMode == ColumnModeSummary) ? sock.col.getData(sock.proc) : (viewMode == ColumnModeModules) ? sock.name : sock.description stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 	if (viewMode == ColumnModePorts)
 		message = [[message stringByReplacingOccurrencesOfString:@" <" withString:@"\n<"] stringByReplacingOccurrencesOfString:@" >" withString:@"\n>"];
-	[[[UIAlertView alloc] initWithTitle:title message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+	NSString *urlA = [[@"filza://" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	open2URL = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
+	//NSLog(@"1[----]%@\n%@\n%@", messageCopy, urlA, open2URL);
+	titleA = ([[UIApplication sharedApplication] canOpenURL:open2URL]) ? @"Copy text and open in Filza" : @"Copy text";
+	[[[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"OK" otherButtonTitles:titleA, nil] show];
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (buttonIndex == 1) {
+        UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+        pasteboard.string = messageCopy;
+        if (![titleA isEqualToString:@"Copy text"])
+		[[UIApplication sharedApplication] openURL:open2URL];
+    }
 }
 
 #pragma mark -
