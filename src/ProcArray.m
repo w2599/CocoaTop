@@ -143,6 +143,7 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 		PSProc *proc = [self procForPid:procs->kp[i].kp_proc.p_pid];
 		if (!proc) {
 			proc = [PSProc psProcWithKinfo:&procs->kp[i] iconSize:self.iconSize];
+			if (!proc.pid) continue;
 			[self.procs addObject:proc];
 		} else {
 			[proc updateWithKinfo:&procs->kp[i]];

@@ -351,10 +351,11 @@ NSURL *open2URL;
 		   *message = (viewMode == ColumnModeSummary) ? [NSString stringWithFormat:@"%@\n\n%@", sock.col.getData(sock.proc),
 		   [sock.col.descr substringWithRange:NSMakeRange(0, [sock.col.descr lineRangeForRange:NSMakeRange(0,1)].length-1)]] :
 					  (viewMode == ColumnModeModules) ? sock.name : sock.description;
-	messageCopy = [(viewMode == ColumnModeSummary) ? sock.col.getData(sock.proc) : (viewMode == ColumnModeModules) ? sock.name : sock.description stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 	if (viewMode == ColumnModePorts)
 		message = [[message stringByReplacingOccurrencesOfString:@" <" withString:@"\n<"] stringByReplacingOccurrencesOfString:@" >" withString:@"\n>"];
-	NSString *urlA = [[@"filza://" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	
+	messageCopy = (viewMode == ColumnModeSummary) ? (([sock.col.getData(sock.proc) hasPrefix:@"/"]) ? sock.proc.executable : sock.col.getData(sock.proc)) : ((viewMode == ColumnModeModules) ? sock.name : sock.description);
+	NSString *urlA = [@"filza://" stringByAppendingString:messageCopy];
 	open2URL = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
 	//NSLog(@"1[----]%@\n%@\n%@", messageCopy, urlA, open2URL);
 	titleA = ([[UIApplication sharedApplication] canOpenURL:open2URL]) ? @"Copy text and open in Filza" : @"Copy text";
