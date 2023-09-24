@@ -356,9 +356,16 @@ NSURL *open2URL;
 	
 	messageCopy = (viewMode == ColumnModeSummary) ? (([sock.col.getData(sock.proc) hasPrefix:@"/"]) ? sock.proc.executable : sock.col.getData(sock.proc)) : ((viewMode == ColumnModeModules) ? sock.name : sock.description);
 	NSString *urlA = [@"filza://" stringByAppendingString:messageCopy];
-	open2URL = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
-	//NSLog(@"1[----]%@\n%@\n%@", messageCopy, urlA, open2URL);
-	titleA = ([[UIApplication sharedApplication] canOpenURL:open2URL]) ? @"Copy text and open in Filza" : @"Copy text";
+	NSString *urlB = [@"fffff://" stringByAppendingString:messageCopy];
+	NSURL *open2URLa = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
+	NSURL *open2URLb = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlB] : nil;
+
+	BOOL canOpenURLa = [[UIApplication sharedApplication] canOpenURL:open2URLa];
+	BOOL canOpenURLb = [[UIApplication sharedApplication] canOpenURL:open2URLb];
+
+	titleA = canOpenURLa ? @"Copy text and open in Filza" : (canOpenURLb ? @"Copy text and open in fakeFilza" : @"Copy text");
+	open2URL = canOpenURLa ? open2URLa : (canOpenURLb ? open2URLb : nil);
+
 	[[[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"OK" otherButtonTitles:titleA, nil] show];
 }
 

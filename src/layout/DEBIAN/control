@@ -2,7 +2,7 @@ Package: zp.cocoatop64.unject
 Name: CocoaTop64.zp
 Depends: 
 Conflicts: ru.domo.cocoatop , ru.domo.cocoatop64 , zp.cocoatop64 , zp.cocoatop64.inject
-Version: 3.0.6+2
+Version: 3.1.0
 Architecture: iphoneos-arm
 Description: Process Viewer for iOS GUI,适配rootless并增加一些小功能.
  - 1.长按图标的插件针对APP更友好
@@ -12,3 +12,4 @@ Description: Process Viewer for iOS GUI,适配rootless并增加一些小功能.
 Maintainer: zp, SXX, Domo
 Author: Domo, SXX , zp
 Section: Utilities
+SileoDepiction: https://rootless.zqbb.cf/web/zp.cocoatop64.unject
