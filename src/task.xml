@@ -30,5 +30,10 @@
 	<true/>
 	<key>com.apple.private.security.no-container</key>
 	<true/>
+	<key>com.apple.security.iokit-user-client-class</key>
+	<array>
+		<string>AGXDeviceUserClient</string>
+		<string>IOSurfaceRootUserClient</string>
+	</array>
 </dict>
 </plist>
