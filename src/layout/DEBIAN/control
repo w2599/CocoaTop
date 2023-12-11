@@ -1,8 +1,8 @@
-Package: zp.cocoatop64.unject
-Name: CocoaTop64.zp
+Package: zp.cocoatop64.unject.xina
+Name: CocoaTop64.zp - xina210
 Depends: 
-Conflicts: ru.domo.cocoatop , ru.domo.cocoatop64 , zp.cocoatop64 , zp.cocoatop64.inject
-Version: 3.1.1
+Conflicts: ru.domo.cocoatop , ru.domo.cocoatop64 , zp.cocoatop64 , zp.cocoatop64.unject
+Version: 3.1.2+1
 Architecture: iphoneos-arm
 Description: Process Viewer for iOS GUI,适配rootless并增加一些小功能.
  - 1.长按图标的插件针对APP更友好

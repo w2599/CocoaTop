@@ -9,6 +9,7 @@
 #import "SetupColumns.h"
 #import "SockViewController.h"
 #import "THtmlViewController.h"
+#import "AppIcon.h"
 
 #define NTSTAT_PREQUERY_INTERVAL 0.1
 
@@ -227,7 +228,7 @@
 
     if (indexPath != nil) {
 
-      NSString *path = @"/var/mobile/zp.unject.plist";
+      NSString *path = @"/var/mobile/Library/Preferences/com.xina.blacklist_new.plist";
       NSMutableDictionary *dict =
           [[NSMutableDictionary alloc] initWithContentsOfFile:path];
       if (!dict) {
@@ -236,7 +237,15 @@
 
       PSProc *proc = procs[indexPath.row];
       NSString *proc_executable = [proc.executable lastPathComponent];
-      [dict removeObjectForKey:proc_executable];
+      NSMutableArray *procsArray = [dict objectForKey:@"procs"];
+      NSMutableArray *bundleIdentifiers = [dict objectForKey:@"bundleIdentifiers"];
+      NSString *bundleID = [PSAppIcon getAppByPath:[proc.executable stringByDeletingLastPathComponent]][@"CFBundleIdentifier"];
+      if (procsArray) {
+          [procsArray removeObject:proc_executable];
+          if ([bundleIdentifiers containsObject:bundleID]) {
+              [bundleIdentifiers removeObject:bundleID];
+          }
+      }
       [dict writeToFile:path atomically:YES];
 
       UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
@@ -743,23 +752,28 @@
      forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
     PSProc *proc = procs[indexPath.row];
-    NSString *path = @"/var/mobile/zp.unject.plist";
-    NSMutableDictionary *dict =
-        [[NSMutableDictionary alloc] initWithContentsOfFile:path];
-    if (!dict) {
-      dict = [[NSMutableDictionary alloc] init];
-      [[[UIAlertView alloc]
-              initWithTitle:@"小朋友"
-                    message:@"禁止注入列表(unJECT)创建成功,长按进程可删除禁止~"
-                   delegate:nil
-          cancelButtonTitle:@"OJBK"
-          otherButtonTitles:nil] show];
+
+NSString *path = @"/var/mobile/Library/Preferences/com.xina.blacklist_new.plist";
+NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+if (!dict) {
+    dict = [[NSMutableDictionary alloc] init];
+    [[[UIAlertView alloc]
+            initWithTitle:@"小朋友"
+            message:@"禁止注入列表(unJECT)创建成功,长按进程可删除禁止~"
+            delegate:nil
+            cancelButtonTitle:@"OJBK"
+            otherButtonTitles:nil] show];
+}
+NSString *proc_executable = [proc.executable lastPathComponent];
+if ([proc_executable length] > 0) {
+    NSMutableArray *procsArray = [dict objectForKey:@"procs"];
+    if (!procsArray) {
+        procsArray = [[NSMutableArray alloc] init];
+        [dict setObject:procsArray forKey:@"procs"];
     }
-    NSString *proc_executable = [proc.executable lastPathComponent];
-    if ([proc_executable length] > 0) {
-      [dict setObject:[NSNumber numberWithBool:YES] forKey:proc_executable];
-      [dict writeToFile:path atomically:YES];
-    }
+    [procsArray addObject:proc_executable];
+    [dict writeToFile:path atomically:YES];
+}
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
                   message: @"已加入禁止注入列表\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
