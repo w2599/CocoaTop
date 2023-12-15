@@ -9,14 +9,14 @@ export  THEOS_PACKAGE_SCHEME=rootless
 if [ $1 -eq "1" ]
 then
 	make do
-	echo -e "sbreload" | ssh root@192.168.31.158
+	# echo -e "sbreload" | ssh root@192.168.31.158
 	exit
 fi
 
 
 make package
 
-mv ./packages/*.deb ~/Desktop/tweaks/debs/ && make clean
+mv ./packages/*.deb ~/Desktop/tweaks/rootless/ && make clean
 
 
 # clean::

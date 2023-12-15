@@ -355,8 +355,9 @@ NSURL *open2URL;
 		message = [[message stringByReplacingOccurrencesOfString:@" <" withString:@"\n<"] stringByReplacingOccurrencesOfString:@" >" withString:@"\n>"];
 	
 	messageCopy = (viewMode == ColumnModeSummary) ? (([sock.col.getData(sock.proc) hasPrefix:@"/"]) ? sock.proc.executable : sock.col.getData(sock.proc)) : ((viewMode == ColumnModeModules) ? sock.name : sock.description);
-	NSString *urlA = [@"filza://" stringByAppendingString:messageCopy];
-	NSString *urlB = [@"fffff://" stringByAppendingString:messageCopy];
+	NSString *urlA = [[@"filza://view" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	NSString *urlB = [[@"fffff://view" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+
 	NSURL *open2URLa = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
 	NSURL *open2URLb = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlB] : nil;
 
