@@ -227,7 +227,7 @@
 
     if (indexPath != nil) {
 
-      NSString *path = @"/var/mobile/zp.unject.plist";
+      NSString *path = @"/var/mobile/zp.inject.plist";
       NSMutableDictionary *dict =
           [[NSMutableDictionary alloc] initWithContentsOfFile:path];
       if (!dict) {
@@ -240,7 +240,7 @@
       [dict writeToFile:path atomically:YES];
 
       UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
-                           message:@"恢复注入成功\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
+                           message:@"删除成功\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
                  preferredStyle:UIAlertControllerStyleAlert];
 
       UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK" style:UIAlertActionStyleDefault
@@ -730,7 +730,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView
     titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath {
-  return @"禁止注入";
+  return @"注入插件";
 }
 
 - (NSString *)tableView:(UITableView *)tableView
@@ -743,14 +743,14 @@
      forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
     PSProc *proc = procs[indexPath.row];
-    NSString *path = @"/var/mobile/zp.unject.plist";
+    NSString *path = @"/var/mobile/zp.inject.plist";
     NSMutableDictionary *dict =
         [[NSMutableDictionary alloc] initWithContentsOfFile:path];
     if (!dict) {
       dict = [[NSMutableDictionary alloc] init];
       [[[UIAlertView alloc]
               initWithTitle:@"小朋友"
-                    message:@"禁止注入列表(unJECT)创建成功,长按进程可删除禁止~"
+                    message:@"注入列表(inJECT)创建成功,长按进程可删除~"
                    delegate:nil
           cancelButtonTitle:@"OJBK"
           otherButtonTitles:nil] show];
@@ -762,7 +762,7 @@
     }
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
-                  message: @"已加入禁止注入列表\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
+                  message: @"已加入注入列表\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
                   preferredStyle:UIAlertControllerStyleAlert];
 
     UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK" style:UIAlertActionStyleDefault
