@@ -30,9 +30,9 @@
 				self.executable = args[0];
 			self.args = @"";
 			
-			BOOL flag = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/.unject"];
+			BOOL flag = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/.inject"];
 			if (flag){
-				NSString *zpath = @"/var/mobile/zp.unject.plist";
+				NSString *zpath = @"/var/mobile/zp.inject.plist";
 				NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:zpath];
 				for (int i = 1; i < args.count; i++){
 					self.args = [self.args stringByAppendingFormat:@" %@", args[i]];
