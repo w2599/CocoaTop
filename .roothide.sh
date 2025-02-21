@@ -1,10 +1,10 @@
 #!/bin/bash
 
-cd $(dirname $0);pwd
-cd src
+cd $(dirname $0)/src;pwd
 make clean
-export package FINALPACKAGE=1
-export THEOS_PACKAGE_SCHEME=rootless
+export THEOS=/Users/zqbb/theos_roothide
+export  package FINALPACKAGE=1
+export  THEOS_PACKAGE_SCHEME=roothide
 export THEOS_DEVICE_IP=192.168.31.158
 export THEOS_DEVICE_PORT=2222
 
@@ -21,7 +21,6 @@ make package
 # mv ./packages/*.deb ~/Desktop/tweaks/debs/ && make clean
 
 
-# clean ::
-	# rm -rf .theos
+# clean::
+	# rm -rf .theos/obj
 	# rm -rf packages
-	

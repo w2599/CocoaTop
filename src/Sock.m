@@ -874,8 +874,9 @@ const char *port_types[] = {"","(thread)","(task)","(host)","(host priv)","(proc
 	if (!rwpi->prp_vip.vip_path[0] && !rwpi->prp_vip.vip_vi.vi_stat.vst_dev && !rwpi->prp_vip.vip_vi.vi_stat.vst_ino)
 		return nil;
 	if (self = [super init]) {
-		self.display = ProcDisplayStarted;
 		self.name = rwpi->prp_vip.vip_path[0] ? [PSSymLink simplifyPathName:[NSString stringWithUTF8String:rwpi->prp_vip.vip_path]] : @"<none>";
+		if ([self.name containsString:@"com.apple.dyld"]) return nil;
+		self.display = ProcDisplayStarted;
 		self.bundle = [self.name lastPathComponent];
 		self.addr = rwpi->prp_prinfo.pri_address;
 		self.size = rwpi->prp_prinfo.pri_size;
