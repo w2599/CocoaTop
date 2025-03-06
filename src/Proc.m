@@ -9,6 +9,7 @@
 #import "sys/proc_info.h"
 #import "sys/libproc.h"
 
+
 @implementation PSProc
 
 - (instancetype)initWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size
@@ -30,9 +31,9 @@
 				self.executable = args[0];
 			self.args = @"";
 			
-			BOOL flag = [[NSFileManager defaultManager] fileExistsAtPath:@"/var/mobile/.inject"];
+			BOOL flag = [[NSFileManager defaultManager] fileExistsAtPath:jbroot(@"/var/mobile/Documents/.inject")];
 			if (flag){
-				NSString *zpath = @"/var/mobile/zp.inject.plist";
+				NSString *zpath = jbroot(@"/var/mobile/Library/RootHide/cn.zqbb.inject.plist");
 				NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:zpath];
 				for (int i = 1; i < args.count; i++){
 					self.args = [self.args stringByAppendingFormat:@" %@", args[i]];

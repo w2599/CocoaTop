@@ -186,7 +186,7 @@
   }
   // #endif
   [[NSUserDefaults standardUserDefaults] registerDefaults:@{
-    @"Columns" : @[ @0, @1, @3, @5, @20, @6, @7, @9, @12, @13 ],
+    @"Columns" : @[ @0, @1, @3, @7, @24],
     @"UpdateInterval" : @"1",
     @"FullWidthCommandLine" : @NO,
     @"ColorDiffs" : @YES,
@@ -227,25 +227,24 @@
 
     if (indexPath != nil) {
 
-      NSString *path = @"/var/mobile/zp.inject.plist";
-      NSMutableDictionary *dict =
-          [[NSMutableDictionary alloc] initWithContentsOfFile:path];
+      NSString *path = jbroot(@"/var/mobile/Library/RootHide/cn.zqbb.inject.plist");
+      NSMutableDictionary *dict = [[NSMutableDictionary alloc] initWithContentsOfFile:path];
       if (!dict) {
-        dict = [[NSMutableDictionary alloc] init];
+          dict = [[NSMutableDictionary alloc] init];
       }
 
       PSProc *proc = procs[indexPath.row];
       NSString *proc_executable = [proc.executable lastPathComponent];
       [dict removeObjectForKey:proc_executable];
-      [dict writeToFile:path atomically:YES];
 
-      UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
-                           message:@"删除成功\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
-                 preferredStyle:UIAlertControllerStyleAlert];
+      UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable message:@"删除成功\nOJBK=立刻生效(杀死进程)\nCancel=取消操作" preferredStyle:UIAlertControllerStyleAlert];
 
-      UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK" style:UIAlertActionStyleDefault
-                                  handler:^(UIAlertAction *_Nonnull action) {
-                                    [self tableView:self.tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath]; }];
+      UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK"
+                                                         style:UIAlertActionStyleDestructive
+                                                       handler:^(UIAlertAction *_Nonnull action) {
+                                                           [dict writeToFile:path atomically:YES];
+                                                           [self tableView:self.tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath];
+                                                       }];
       UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
       [alert addAction:okAction];
       [alert addAction:cancelAction];
@@ -743,31 +742,26 @@
      forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
     PSProc *proc = procs[indexPath.row];
-    NSString *path = @"/var/mobile/zp.inject.plist";
+    NSString *path = jbroot(@"/var/mobile/Library/RootHide/cn.zqbb.inject.plist");
     NSMutableDictionary *dict =
         [[NSMutableDictionary alloc] initWithContentsOfFile:path];
     if (!dict) {
-      dict = [[NSMutableDictionary alloc] init];
-      [[[UIAlertView alloc]
-              initWithTitle:@"小朋友"
-                    message:@"注入列表(inJECT)创建成功,长按进程可删除~"
-                   delegate:nil
-          cancelButtonTitle:@"OJBK"
-          otherButtonTitles:nil] show];
+        dict = [[NSMutableDictionary alloc] init];
+        [[[UIAlertView alloc] initWithTitle:@"请注意" message:@"注入列表(inJect)创建成功,长按进程可删除~" delegate:nil cancelButtonTitle:@"OJBK" otherButtonTitles:nil] show];
     }
     NSString *proc_executable = [proc.executable lastPathComponent];
     if ([proc_executable length] > 0) {
       [dict setObject:[NSNumber numberWithBool:YES] forKey:proc_executable];
-      [dict writeToFile:path atomically:YES];
     }
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable
-                  message: @"已加入注入列表\nOJBK=立刻杀死进程来生效\nCancel=下次生效"
-                  preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc_executable message: @"已加入注入列表\nOJBK=立刻生效(杀死进程)\nCancel=取消操作" preferredStyle:UIAlertControllerStyleAlert];
 
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK" style:UIAlertActionStyleDefault
-                                  handler:^(UIAlertAction *_Nonnull action) {
-                                    [self tableView:self.tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath]; }];
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OJBK"
+                                                       style:UIAlertActionStyleDestructive
+                                                     handler:^(UIAlertAction *_Nonnull action) {
+                                                         [dict writeToFile:path atomically:YES];
+                                                         [self tableView:self.tableView sendSignal:SIGKILL toProcessAtIndexPath:indexPath];
+                                                     }];
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
     [alert addAction:okAction];
     [alert addAction:cancelAction];

@@ -1,14 +1,11 @@
-Package: zp.cocoatop64.inject
-Name: CocoaTop64.zp inject
+Package: cn.zqbb.cocoatop64.inject.roothide
+Name: CocoaTop64 inject (RootHide)
 Depends: 
-Conflicts: ru.domo.cocoatop , ru.domo.cocoatop64 , zp.cocoatop64 , zp.cocoatop64.unject
-Version: 3.1.2
+Conflicts: ru.domo.cocoatop, ru.domo.cocoatop64, zp.cocoatop64, zp.cocoatop64.unject, zp.cocoatop64.inject
+Version: 3.2.0
 Architecture: iphoneos-arm
-Description: Process Viewer for iOS GUI,适配rootless并增加一些小功能.
- - 1.长按图标的插件针对APP更友好
- - 2.此app更适合屏蔽进程类的注入
- - 3.laileld要加的copy给加上(如果是/开头,使用filza打开)
+Description: (RootHide) 白名单注入辅助器
 Maintainer: zp, SXX, Domo
 Author: Domo, SXX , zp
 Section: Utilities
-SileoDepiction: https://rootless.zqbb.cf/web/zp.cocoatop64.unject
+SileoDepiction: https://rootless.zqbb.cf/web/cn.zqbb.cocoatop64.inject.roothide
