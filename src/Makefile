@@ -1,4 +1,4 @@
-ARCHS = arm64e 
+ARCHS = arm64 arm64e 
 TARGET = iphone:clang:14.5:8.0
 APPLICATION_NAME = CocoaTop
 INSTALL_TARGET_PROCESSES = CocoaTop
