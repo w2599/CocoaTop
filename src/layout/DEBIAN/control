@@ -1,4 +1,4 @@
-Package: ru.domo.cocoatop64
+Package: cn.zqbb.ccatop
 Name: CocoaTop
 Depends: 
 Conflicts: ru.domo.cocoatop, ru.domo.cocoatop64, cn.zqbb.cocoatop64.inject.roothide, zp.cocoatop64.unject, zp.cocoatop64.unject.xina, zp.cocoatop64.inject
