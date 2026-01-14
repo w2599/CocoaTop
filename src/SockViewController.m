@@ -5,6 +5,9 @@
 #import "Sock.h"
 
 NSString *ColumnModeName[ColumnModes] = {@"Summary", @"Threads", @"Open files", @"Open ports", @"Modules"};
+NSString *messageCopy=@"";
+NSString *titleA=@"";
+NSURL *open2URL;
 
 @implementation SockViewController
 {
@@ -345,12 +348,41 @@ NSString *ColumnModeName[ColumnModes] = {@"Summary", @"Threads", @"Open files", 
 	if (!sock)
 		return;
 	NSString *title = (viewMode == ColumnModeSummary) ? sock.name : ColumnModeName[viewMode],
-		   *message = (viewMode == ColumnModeSummary) ? [NSString stringWithFormat:@"%@\n\n%@", sock.col.getData(sock.proc),
-		   [sock.col.descr substringWithRange:NSMakeRange(0, [sock.col.descr lineRangeForRange:NSMakeRange(0,1)].length-1)]] :
-					  (viewMode == ColumnModeModules) ? sock.name : sock.description;
+	   *message = (viewMode == ColumnModeSummary) ? [NSString stringWithFormat:@"%@\n\n%@", sock.col.getData(sock.proc),
+	   [sock.col.descr substringWithRange:NSMakeRange(0, [sock.col.descr lineRangeForRange:NSMakeRange(0,1)].length-1)]] :
+			  (viewMode == ColumnModeModules) ? sock.name : sock.description;
+	messageCopy = [(viewMode == ColumnModeSummary) ? sock.col.getData(sock.proc) : (viewMode == ColumnModeModules) ? sock.name : sock.description stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 	if (viewMode == ColumnModePorts)
 		message = [[message stringByReplacingOccurrencesOfString:@" <" withString:@"\n<"] stringByReplacingOccurrencesOfString:@" >" withString:@"\n>"];
-	[[[UIAlertView alloc] initWithTitle:title message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+	NSString *urlA = [[@"filza://view/" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	open2URL = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
+	// 根据内容是否为路径（以 '/' 开头）决定是否显示跳转按钮
+	if ([messageCopy hasPrefix:@"/"]) {
+		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"复制", @"跳转", nil];
+		[alert show];
+	} else {
+		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"复制", nil];
+		[alert show];
+	}
+}
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+	// 0: 取消, 1: 复制, 2: 跳转
+	if (buttonIndex == 1) {
+		UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+		pasteboard.string = messageCopy;
+	} else if (buttonIndex == 2) {
+		NSURL *filzaURL = open2URL;
+		if (filzaURL && [[UIApplication sharedApplication] canOpenURL:filzaURL]) {
+			[[UIApplication sharedApplication] openURL:filzaURL];
+		} else {
+			NSString *urlF = [[@"fffff://view/" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+			NSURL *fffffURL = [NSURL URLWithString:urlF];
+			if (fffffURL) {
+				[[UIApplication sharedApplication] openURL:fffffURL];
+			}
+		}
+	}
 }
 
 #pragma mark -

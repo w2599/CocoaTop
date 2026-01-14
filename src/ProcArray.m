@@ -140,7 +140,11 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 	if (procs->ret)
 		return procs->ret;
 	for (int i = 0; i < procs->count; i++) {
-		PSProc *proc = [self procForPid:procs->kp[i].kp_proc.p_pid];
+		pid_t thispid = procs->kp[i].kp_proc.p_pid;
+		// Do not include kernel process (pid 0) in the visible list
+		if (thispid == 0) continue;
+
+		PSProc *proc = [self procForPid:thispid];
 		if (!proc) {
 			proc = [PSProc psProcWithKinfo:&procs->kp[i] iconSize:self.iconSize];
 			[self.procs addObject:proc];
