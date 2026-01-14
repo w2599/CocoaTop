@@ -1,4 +1,4 @@
-Package: ru.domo.cocoatop64
+Package: cn.zqbb.cocoatop64.relaxin
 Name: CocoaTop
 Depends: 
 Conflicts: ru.domo.cocoatop, ru.domo.cocoatop64, cn.zqbb.cocoatop64.inject.roothide, zp.cocoatop64.unject, zp.cocoatop64.unject.xina, zp.cocoatop64.inject
@@ -8,5 +8,5 @@ Description: Process Viewer for iOS GUI, updated for iOS 13 by SXX.
 Maintainer: SXX, Domo
 Author: Domo, SXX
 Section: Utilities
-Icon: https://apt.002599.xyz/web/icon/cn.zqbb.ccatop.png
-SileoDepiction: https://apt.002599.xyz/web/cn.zqbb.ccatop
+Icon: https://apt.002599.xyz/web/icon/cn.zqbb.cocoatop64.relaxin.png
+SileoDepiction: https://apt.002599.xyz/web/cn.zqbb.cocoatop64.relaxin
