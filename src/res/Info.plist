@@ -18,7 +18,7 @@
 	<key>CFBundleExecutable</key>
 	<string>CocoaTop</string>
 	<key>CFBundleIdentifier</key>
-	<string>ru.domo.cocoatop64</string>
+	<string>cn.zqbb.ccatop.relaxin.whitelist</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
