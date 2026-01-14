@@ -121,6 +121,11 @@
 	twoTap.numberOfTouchesRequired = 2;
 	[self.tableView addGestureRecognizer:twoTap];
 
+	// 长按复制进程可执行路径
+	UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)];
+	longPress.minimumPressDuration = 0.5;
+	[self.tableView addGestureRecognizer:longPress];
+
 	filter = [[UISearchBar alloc] initWithFrame:CGRectMake(0, 0, self.tableView.frame.size.width, 0)];
 	filter.autocapitalizationType = UITextAutocapitalizationTypeNone;
 	filter.autocorrectionType = UITextAutocorrectionTypeNo;
@@ -332,6 +337,21 @@
 		}
 		break;
 	}
+}
+
+- (void)handleLongPress:(UILongPressGestureRecognizer *)gestureRecognizer {
+	if (gestureRecognizer.state != UIGestureRecognizerStateBegan) return;
+	CGPoint pt = [gestureRecognizer locationInView:self.tableView];
+	NSIndexPath *indexPath = [self.tableView indexPathForRowAtPoint:pt];
+	if (!indexPath) return;
+	PSProc *p = procs[indexPath.row];
+	if (!p || !p.executable || p.executable.length == 0) {
+		[[[UIAlertView alloc] initWithTitle:@"提示" message:@"无可用路径" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil] show];
+		return;
+	}
+	UIPasteboard *pb = [UIPasteboard generalPasteboard];
+	pb.string =[p.executable lastPathComponent];
+	// 已静默复制到剪贴板（不提示）
 }
 
 - (void)scrollToBottom
