@@ -13,7 +13,7 @@ CocoaTop_RESOURCE_DIRS = res
 include $(THEOS)/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/application.mk
 
-SUBPROJECTS = postinst
+# SUBPROJECTS = postinst
 include $(THEOS_MAKE_PATH)/aggregate.mk
 
 #before-package::
