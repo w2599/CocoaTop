@@ -15,7 +15,4 @@ if [ -d "/rootfs" ]; then
     rootfsPath="/rootfs"
 fi
 
-
-
-chown root:wheel $jbrootPath/Applications/CocoaTop.app/CocoaTop
-chmod +s $jbrootPath/Applications/CocoaTop.app/CocoaTop
+uicache -u $jbrootPath/Applications/CocoaTop.app
