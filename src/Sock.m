@@ -985,6 +985,8 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 				struct proc_regionwithpathinfo rwpi;
 				if (proc_pidinfo(socks.proc.pid, PROC_PIDREGIONPATHINFO, addr, &rwpi, PROC_PIDREGIONPATHINFO_SIZE) != PROC_PIDREGIONPATHINFO_SIZE)
 					continue;
+				if (strstr(rwpi.prp_vip.vip_path, "com.apple.dyld"))
+					continue;
 				PSSockModules *sock = (PSSockModules *)[socks objectPassingTest:^BOOL(PSSockModules *obj, NSUInteger idx, BOOL *stop) {
 					return obj.addr == addr;
 				}];
