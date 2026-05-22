@@ -9,8 +9,10 @@
 #import "Proc.h"
 #import "ProcArray.h"
 #import "AppDelegate.h"
+#import "roothide.h"
 
 #define NTSTAT_PREQUERY_INTERVAL	0.1
+#define ROOTHIDE_WHITELIST_PATH jbroot(@"/var/mobile/Library/RootHide/cn.zqbb.inject.plist")
 
 @implementation UIScrollView (AdjustInset)
 
@@ -562,6 +564,41 @@
 	[timer performSelector:@selector(fire) withObject:nil afterDelay:.1f];
 }
 
+- (NSMutableDictionary *)getWhitelistConfig
+{
+	NSMutableDictionary *whitelistConfig = [NSMutableDictionary dictionaryWithContentsOfFile:ROOTHIDE_WHITELIST_PATH];
+	if (!whitelistConfig) {
+		NSLog(@"[----] whitelistConfig is nil, create new one");
+		whitelistConfig = [NSMutableDictionary dictionary];
+	}
+	return whitelistConfig;
+}
+- (BOOL)isWhitelistedForProcess:(PSProc *)proc
+{
+	NSString *processName = proc.name;
+	if (!processName.length)
+		return NO;
+		
+	NSMutableDictionary *whitelistConfig = [self getWhitelistConfig];
+	return [whitelistConfig[processName] boolValue];
+}
+
+- (BOOL)setWhitelisted:(BOOL)whitelisted forProcess:(PSProc *)proc
+{
+	NSString *processName = proc.name;
+	if (!processName.length) {
+		NSLog(@"[----] processName is nil for proc: %@", proc.name);
+		return NO;
+	}
+	NSMutableDictionary *whitelistConfig = [NSMutableDictionary dictionaryWithContentsOfFile:ROOTHIDE_WHITELIST_PATH];
+	if (!whitelistConfig){
+		NSLog(@"[----] whitelistConfig is nil, create new one");
+		whitelistConfig = [NSMutableDictionary dictionary];
+	}
+	whitelistConfig[processName] = @(whitelisted);
+	return [whitelistConfig writeToFile:ROOTHIDE_WHITELIST_PATH atomically:YES];
+}
+
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	return @"KILL";
@@ -569,7 +606,9 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForSwipeAccessoryButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	return @"TERM";
+	PSProc *proc = procs[indexPath.row];
+	BOOL isWhitelisted = [self isWhitelistedForProcess:proc];
+	return isWhitelisted ? @"禁止注入" : @"开启注入";
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -580,7 +619,13 @@
 
 - (void)tableView:(UITableView *)tableView swipeAccessoryButtonPushedForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	[self tableView:tableView sendSignal:SIGTERM toProcessAtIndexPath:indexPath];
+	PSProc *proc = procs[indexPath.row];
+	BOOL wantsWhiteList = ![self isWhitelistedForProcess:proc];
+	if (![self setWhitelisted:wantsWhiteList forProcess:proc]) {
+		NSString *message = [NSString stringWithFormat:@"无法写入 %@", ROOTHIDE_WHITELIST_PATH];
+		[[[UIAlertView alloc] initWithTitle:proc.name message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+		return;
+	}
 }
 
 #pragma mark -
