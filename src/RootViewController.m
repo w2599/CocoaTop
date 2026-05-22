@@ -9,8 +9,10 @@
 #import "Proc.h"
 #import "ProcArray.h"
 #import "AppDelegate.h"
+#import "roothide.h"
 
 #define NTSTAT_PREQUERY_INTERVAL	0.1
+#define ROOT_HIDE_CONFIG_PLIST jbroot(@"/var/mobile/Library/RootHide/RootHideConfig.plist")
 
 @implementation UIScrollView (AdjustInset)
 
@@ -562,6 +564,63 @@
 	[timer performSelector:@selector(fire) withObject:nil afterDelay:.1f];
 }
 
+- (NSMutableDictionary *)getBlacklistAppConfig
+{
+	NSMutableDictionary *rootHideConfig = [NSMutableDictionary dictionaryWithContentsOfFile:ROOT_HIDE_CONFIG_PLIST];
+	if (!rootHideConfig){
+		NSLog(@"[----] rootHideConfig is nil, create new one");
+		rootHideConfig = [NSMutableDictionary dictionary];
+	}
+		
+	NSMutableDictionary *appconfig = [rootHideConfig[@"appconfig"] mutableCopy];
+	if (!appconfig) {
+		NSLog(@"[----] appconfig is nil, create new one");
+		appconfig = [NSMutableDictionary dictionary];
+	}
+	return appconfig;
+}
+
+- (NSString *)bundleIdentifierForProcess:(PSProc *)proc
+{
+	if (![proc.app isKindOfClass:[NSDictionary class]])
+		return nil;
+	NSString *bundleIdentifier = proc.app[@"CFBundleIdentifier"];
+	return [bundleIdentifier isKindOfClass:[NSString class]] && bundleIdentifier.length ? bundleIdentifier : nil;
+}
+
+- (BOOL)isBlackListedForProcess:(PSProc *)proc
+{
+	NSString *bundleIdentifier = [self bundleIdentifierForProcess:proc];
+	if (!bundleIdentifier.length)
+		return NO;
+		
+	NSMutableDictionary *appconfig = [self getBlacklistAppConfig];
+	return [appconfig[bundleIdentifier] boolValue];
+}
+
+- (BOOL)setBlacklisted:(BOOL)blacklisted forProcess:(PSProc *)proc
+{
+	NSString *bundleIdentifier = [self bundleIdentifierForProcess:proc];
+	if (!bundleIdentifier.length) {
+		NSLog(@"[----] bundleIdentifier is nil for proc: %@", proc.name);
+		return NO;
+	}
+	NSMutableDictionary *rootHideConfig = [NSMutableDictionary dictionaryWithContentsOfFile:ROOT_HIDE_CONFIG_PLIST];
+	if (!rootHideConfig){
+		NSLog(@"[----] rootHideConfig is nil, create new one");
+		rootHideConfig = [NSMutableDictionary dictionary];
+	}
+		
+	NSMutableDictionary *appconfig = [rootHideConfig[@"appconfig"] mutableCopy];
+	if (!appconfig) {
+		NSLog(@"[----] appconfig is nil, create new one");
+		appconfig = [NSMutableDictionary dictionary];
+	}
+	appconfig[bundleIdentifier] = @(blacklisted);
+	rootHideConfig[@"appconfig"] = appconfig;
+	return [rootHideConfig writeToFile:ROOT_HIDE_CONFIG_PLIST atomically:YES];
+}
+
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	return @"KILL";
@@ -569,7 +628,20 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForSwipeAccessoryButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	return @"TERM";
+	PSProc *proc = procs[indexPath.row];
+	NSString *bundleIdentifier = [self bundleIdentifierForProcess:proc];
+	BOOL haveBundleIdentifier = bundleIdentifier.length > 0;
+
+	NSString *executable = proc.executable;
+	BOOL isContainersBundleApplication = [executable containsString:@"/var/containers/Bundle/Application/"];
+	BOOL isAppPlugins = [executable containsString:@"/var/containers/Bundle/Application/"] && [executable containsString:@"/PlugIns/"];
+	BOOL isRootHide = [proc.name isEqualToString:@"RootHide"];
+	if (!haveBundleIdentifier || !isContainersBundleApplication || isAppPlugins || isRootHide) {
+		return @"TERM";
+	}
+
+	BOOL isBlacklisted = [self isBlackListedForProcess:proc];
+	return isBlacklisted ? @"开启注入" : @"禁止注入";
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -580,7 +652,13 @@
 
 - (void)tableView:(UITableView *)tableView swipeAccessoryButtonPushedForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	[self tableView:tableView sendSignal:SIGTERM toProcessAtIndexPath:indexPath];
+	PSProc *proc = procs[indexPath.row];
+	BOOL wantsBlackList = ![self isBlackListedForProcess:proc];
+	if (![self setBlacklisted:wantsBlackList forProcess:proc]) {
+		NSString *message = [self bundleIdentifierForProcess:proc] ? [NSString stringWithFormat:@"无法写入 %@", ROOT_HIDE_CONFIG_PLIST] : @"该进程不是 app，无法设置注入";
+		[[[UIAlertView alloc] initWithTitle:proc.name message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+		return;
+	}
 }
 
 #pragma mark -
