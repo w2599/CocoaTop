@@ -9,8 +9,10 @@
 #import "Proc.h"
 #import "ProcArray.h"
 #import "AppDelegate.h"
+#import "roothide.h"
 
 #define NTSTAT_PREQUERY_INTERVAL	0.1
+#define ROOT_HIDE_INJECT_PLIST jbroot(@"/var/mobile/Library/RootHide/cn.zqbb.inject.plist")
 
 @implementation UIScrollView (AdjustInset)
 
@@ -562,6 +564,31 @@
 	[timer performSelector:@selector(fire) withObject:nil afterDelay:.1f];
 }
 
+- (NSMutableDictionary *)injectConfiguration
+{
+	NSMutableDictionary *config = [NSMutableDictionary dictionaryWithContentsOfFile:ROOT_HIDE_INJECT_PLIST];
+	if (config)
+		return config;
+	return [NSMutableDictionary dictionary];
+}
+
+- (BOOL)isEnableForProcessName:(NSString *)processName
+{
+	if (!processName.length)
+		return NO;
+	NSNumber *value = [self injectConfiguration][processName];
+	return value.boolValue;
+}
+
+- (BOOL)setInjection:(BOOL)enabled forProcessName:(NSString *)processName
+{
+	if (!processName.length)
+		return NO;
+	NSMutableDictionary *config = [self injectConfiguration];
+	config[processName] = @(enabled);
+	return [config writeToFile:ROOT_HIDE_INJECT_PLIST atomically:YES];
+}
+
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	return @"KILL";
@@ -569,7 +596,8 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForSwipeAccessoryButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	return @"TERM";
+	PSProc *proc = procs[indexPath.row];
+	return [self isEnableForProcessName:proc.name] ? @"禁止注入" : @"开启注入";
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -580,7 +608,13 @@
 
 - (void)tableView:(UITableView *)tableView swipeAccessoryButtonPushedForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	[self tableView:tableView sendSignal:SIGTERM toProcessAtIndexPath:indexPath];
+	PSProc *proc = procs[indexPath.row];
+	BOOL enable = ![self isEnableForProcessName:proc.name];
+	if (![self setInjection:enable forProcessName:proc.name]) {
+		NSString *message = [NSString stringWithFormat:@"无法写入 %@", ROOT_HIDE_INJECT_PLIST];
+		[[[UIAlertView alloc] initWithTitle:proc.name message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+		return;
+	}
 }
 
 #pragma mark -
