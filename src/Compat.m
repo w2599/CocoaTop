@@ -1,4 +1,5 @@
 #import "Compat.h"
+#import "CocoaTopPreferences.h"
 #import <mach/mach_time.h>
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED < __IPHONE_6_0
@@ -72,7 +73,7 @@ uint64_t mach_time_to_milliseconds(uint64_t mach_time)
 		target = [results copy];
 	});
 	path = [path stringByStandardizingPath];
-	if (![path hasPrefix:@"/"] || ![[NSUserDefaults standardUserDefaults] boolForKey:@"ShortenPaths"])
+	if (![path hasPrefix:@"/"] || ![[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShortenPaths"] boolValue])
 		return path;
 	// Replace link targets with symlinks
 	for (int i = 0; i < target.count; i++) {
