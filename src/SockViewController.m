@@ -3,6 +3,7 @@
 #import "GridCell.h"
 #import "Column.h"
 #import "Sock.h"
+#import "CocoaTopPreferences.h"
 
 NSString *ColumnModeName[ColumnModes] = {@"Summary", @"Threads", @"Open files", @"Open ports", @"Modules"};
 NSString *messageCopy=@"";
@@ -36,7 +37,7 @@ NSURL *open2URL;
 		viewMode = self.popupMenuSelected = item;
 		socks = [PSSockArray psSockArrayWithProc:proc];
 		[self configureMode];
-		[[NSUserDefaults standardUserDefaults] setInteger:viewMode forKey:@"ProcInfoMode"];
+		[[CocoaTopPreferences sharedPreferences] setObject:@(viewMode) forKey:@"ProcInfoMode"];
 		[self refreshSocks:nil];
 	}
 }
@@ -70,7 +71,7 @@ NSURL *open2URL;
 		CGSize size = [UIApplication sharedApplication].statusBarFrame.size;
 		CGFloat slide = MIN(size.width, size.height) +
 			self.navigationController.navigationBar.frame.size.height +
-			([[NSUserDefaults standardUserDefaults] boolForKey:@"ShowHeader"] ? self.tableView.sectionHeaderHeight : 0);
+			([[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowHeader"] boolValue] ? self.tableView.sectionHeaderHeight : 0);
 		CGPoint contentOffset = self.tableView.contentOffset;
 		contentOffset.y += fullScreen ? -slide : slide;
 		[self.tableView setContentOffset:contentOffset animated:NO];
@@ -90,7 +91,7 @@ NSURL *open2URL;
 
     self.navigationItem.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Back"
         style: UIBarButtonItemStyleDone target:self action:@selector(backWithoutAnimation)];
-	viewMode = [[NSUserDefaults standardUserDefaults] integerForKey:@"ProcInfoMode"];
+	viewMode = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ProcInfoMode"] integerValue];
 	NSMutableArray *modeItems = [NSMutableArray arrayWithObjects:ColumnModeName count:ColumnModes];
 	modeItems[ColumnModeThreads] = [modeItems[ColumnModeThreads] stringByAppendingFormat:@" (%u)", proc.threads];
 	modeItems[ColumnModeFiles  ] = [modeItems[ColumnModeFiles  ] stringByAppendingFormat:@" (%u)", proc.files];
@@ -158,7 +159,7 @@ NSURL *open2URL;
 		if (socks.count)
 			[self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]
 				atScrollPosition:UITableViewScrollPositionNone animated:NO];
-	} else if ([[NSUserDefaults standardUserDefaults] boolForKey:@"AutoJumpNewProcess"]) {
+	} else if ([[[CocoaTopPreferences sharedPreferences] objectForKey:@"AutoJumpNewProcess"] boolValue]) {
 		// If there's a new socket, scroll to it
 		NSUInteger
 			idx = [socks indexOfDisplayed:ProcDisplayStarted];
@@ -181,8 +182,8 @@ NSURL *open2URL;
 		sortDescending = sortColumn == col ? !sortDescending : col.style & ColumnStyleSortDesc;
 		[header sortColumnOld:sortColumn New:col desc:sortDescending];
 		sortColumn = col;
-		[[NSUserDefaults standardUserDefaults] setInteger:col.tag forKey:[NSString stringWithFormat:@"Mode%dSortColumn", viewMode]];
-		[[NSUserDefaults standardUserDefaults] setBool:sortDescending forKey:[NSString stringWithFormat:@"Mode%dSortDescending", viewMode]];
+		[[CocoaTopPreferences sharedPreferences] setObject:@(col.tag) forKey:[NSString stringWithFormat:@"Mode%dSortColumn", viewMode]];
+		[[CocoaTopPreferences sharedPreferences] setObject:@(sortDescending) forKey:[NSString stringWithFormat:@"Mode%dSortDescending", viewMode]];
 		[timer fire];
 		break;
 	}
@@ -195,13 +196,13 @@ NSURL *open2URL;
 	columns = [PSColumn psGetTaskColumnsWithWidth:self.tableView.bounds.size.width mode:viewMode];
 	// Find sort column and create table header
 	NSString *key = [NSString stringWithFormat:@"Mode%dSortColumn", viewMode];
-	sortColumn = [PSColumn psTaskColumnWithTag:[[NSUserDefaults standardUserDefaults] integerForKey:key] forMode:viewMode];
+	sortColumn = [PSColumn psTaskColumnWithTag:[[[CocoaTopPreferences sharedPreferences] objectForKey:key] integerValue] forMode:viewMode];
 	if (!sortColumn) {
-		[[NSUserDefaults standardUserDefaults] removeObjectForKey:key];
-		sortColumn = [PSColumn psTaskColumnWithTag:[[NSUserDefaults standardUserDefaults] integerForKey:key] forMode:viewMode];
+		[[CocoaTopPreferences sharedPreferences] removeObjectForKey:key];
+		sortColumn = [PSColumn psTaskColumnWithTag:[[[CocoaTopPreferences sharedPreferences] objectForKey:key] integerValue] forMode:viewMode];
 		if (!sortColumn) sortColumn = columns[0];
 	}
-	sortDescending = [[NSUserDefaults standardUserDefaults] boolForKey:[NSString stringWithFormat:@"Mode%dSortDescending", viewMode]];
+	sortDescending = [[[CocoaTopPreferences sharedPreferences] objectForKey:[NSString stringWithFormat:@"Mode%dSortDescending", viewMode]] boolValue];
 	header = [GridHeaderView headerWithColumns:columns size:CGSizeMake(0, self.tableView.sectionHeaderHeight)];
 	[header sortColumnOld:nil New:sortColumn desc:sortDescending];
 	[header addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(sortHeader:)]];
@@ -226,7 +227,7 @@ NSURL *open2URL;
     procName = [proc.executable lastPathComponent];
     [self configureMode];
     // Refresh interval
-    timerInterval = [[NSUserDefaults standardUserDefaults] floatForKey:@"UpdateInterval"];
+	timerInterval = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"UpdateInterval"] floatValue];
     [self refreshSocks:nil];
 }
 
