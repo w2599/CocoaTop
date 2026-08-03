@@ -154,6 +154,7 @@
 - (void)updateWithProc:(PSProc *)proc columns:(NSArray *)columns
 {
 	self.textLabel.text = proc.name;
+	self.textLabel.textColor = proc.uid == 0 ? [UIColor colorWithRed:0.55 green:0.55 blue:1.0 alpha:1.0] : [UIColor blackColor];
 	self.detailTextLabel.text = [proc.executable stringByAppendingString:proc.args];
 	if (proc.icon)
 		self.imageView.image = proc.icon;
