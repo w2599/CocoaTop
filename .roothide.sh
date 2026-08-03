@@ -10,12 +10,12 @@ export THEOS_PACKAGE_SCHEME=roothide
 if [ $1 -eq "0" ]
 then
 	make do
-	make clean
-	exit
+else
+	make package
 fi
 
 
-make package
+
 mv ./packages/*.deb ~/Documents/GitHub/myTweaks/roothide/
 make clean
 # mv ./packages/*.deb ~/Desktop/tweaks/debs/ && make clean

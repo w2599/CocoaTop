@@ -14,6 +14,7 @@
 
 #define NTSTAT_PREQUERY_INTERVAL	0.1
 #define ROOT_HIDE_INJECT_PLIST jbroot(@"/var/mobile/Library/RootHide/cn.zqbb.unject.plist")
+#define ROOT_HIDE_CONFIG_PLIST jbroot(@"/var/mobile/Library/RootHide/RootHideConfig.plist")
 
 @implementation UIScrollView (AdjustInset)
 
@@ -572,21 +573,43 @@
 	return [NSMutableDictionary dictionary];
 }
 
-- (BOOL)isInjectionDisabledForProcessName:(NSString *)processName
+- (NSString *)bundleIdentifierForProcess:(PSProc *)proc
 {
-	if (!processName.length)
+	if (![proc.app isKindOfClass:[NSDictionary class]])
+		return nil;
+	NSString *bundleIdentifier = proc.app[@"CFBundleIdentifier"];
+	return [bundleIdentifier isKindOfClass:[NSString class]] && bundleIdentifier.length ? bundleIdentifier : nil;
+}
+
+- (BOOL)isInjectionDisabledForProcess:(PSProc *)proc
+{
+	if (!proc.name.length)
 		return NO;
-	NSNumber *value = [self injectConfiguration][processName];
+	NSNumber *value = [self injectConfiguration][proc.name];
 	return value.boolValue;
 }
 
-- (BOOL)setInjectionDisabled:(BOOL)disabled forProcessName:(NSString *)processName
+- (BOOL)setInjectionDisabled:(BOOL)disabled forProcess:(PSProc *)proc
 {
-	if (!processName.length)
+	if (!proc.name.length)
 		return NO;
-	NSMutableDictionary *config = [self injectConfiguration];
-	config[processName] = @(disabled);
-	return [config writeToFile:ROOT_HIDE_INJECT_PLIST atomically:YES];
+	NSMutableDictionary *injectConfig = [self injectConfiguration];
+	injectConfig[proc.name] = @(disabled);
+	if (![injectConfig writeToFile:ROOT_HIDE_INJECT_PLIST atomically:YES])
+		return NO;
+
+	NSString *bundleIdentifier = [self bundleIdentifierForProcess:proc];
+	if (!bundleIdentifier.length)
+		return YES;
+	NSMutableDictionary *rootHideConfig = [NSMutableDictionary dictionaryWithContentsOfFile:ROOT_HIDE_CONFIG_PLIST];
+	if (!rootHideConfig)
+		rootHideConfig = [NSMutableDictionary dictionary];
+	NSMutableDictionary *appconfig = [rootHideConfig[@"appconfig"] mutableCopy];
+	if (!appconfig)
+		appconfig = [NSMutableDictionary dictionary];
+	appconfig[bundleIdentifier] = @(disabled);
+	rootHideConfig[@"appconfig"] = appconfig;
+	return [rootHideConfig writeToFile:ROOT_HIDE_CONFIG_PLIST atomically:YES];
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -597,7 +620,7 @@
 - (NSString *)tableView:(UITableView *)tableView titleForSwipeAccessoryButtonForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	PSProc *proc = procs[indexPath.row];
-	return [self isInjectionDisabledForProcessName:proc.name] ? @"开启注入" : @"禁止注入";
+	return [self isInjectionDisabledForProcess:proc] ? @"开启注入" : @"禁止注入";
 }
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
@@ -609,9 +632,9 @@
 - (void)tableView:(UITableView *)tableView swipeAccessoryButtonPushedForRowAtIndexPath:(NSIndexPath *)indexPath
 {
 	PSProc *proc = procs[indexPath.row];
-	BOOL disableInjection = ![self isInjectionDisabledForProcessName:proc.name];
-	if (![self setInjectionDisabled:disableInjection forProcessName:proc.name]) {
-		NSString *message = [NSString stringWithFormat:@"无法写入 %@", ROOT_HIDE_INJECT_PLIST];
+	BOOL disableInjection = ![self isInjectionDisabledForProcess:proc];
+	if (![self setInjectionDisabled:disableInjection forProcess:proc]) {
+		NSString *message = [self bundleIdentifierForProcess:proc] ? [NSString stringWithFormat:@"无法写入 %@", ROOT_HIDE_CONFIG_PLIST] : @"该进程不是 app，无法设置注入";
 		[[[UIAlertView alloc] initWithTitle:proc.name message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
 		return;
 	}
