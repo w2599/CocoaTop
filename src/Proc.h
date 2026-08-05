@@ -53,6 +53,7 @@ typedef struct PSCounts {
 @public struct PSCounts netstat;
 @public struct PSCounts netstat_prev;
 @public struct PSCounts netstat_cache;
+@public uint64_t rusageSampleTime;
 }
 @property (assign) display_t display;
 @property (assign) pid_t pid;

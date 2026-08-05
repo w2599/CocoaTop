@@ -142,7 +142,7 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 	for (int i = 0; i < procs->count; i++) {
 		pid_t thispid = procs->kp[i].kp_proc.p_pid;
 		// Do not include kernel process (pid 0) in the visible list
-		if (thispid == 0) continue;
+		// if (thispid == 0) continue;
 
 		PSProc *proc = [self procForPid:thispid];
 		if (!proc) {
