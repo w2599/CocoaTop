@@ -9,6 +9,8 @@
 #import <sys/stat.h>
 #import <sys/fcntl.h>
 #import <mach/mach_time.h>
+#import "sys/libproc.h"
+#import "sys/proc_info.h"
 
 NSString *psProcessStateString(PSProc *proc)
 {
@@ -127,15 +129,24 @@ NSString *psSystemUptime()
 		return @"-";
 }
 
-NSString *psProcessUptime(uint64_t uptime, uint64_t exittime)
+NSString *psProcessUptime(pid_t pid)
 {
-	if (!uptime)
-		return @"-";
-	if (!exittime) exittime = mach_absolute_time();
-	uptime = mach_time_to_milliseconds(exittime - uptime) / 1000;
-	uint64_t days = uptime/60/60/24;
-	return days ? [NSString stringWithFormat:@"%llud %02llu:%02llu:%02llu", days, (uptime/60/60) % 24, (uptime/60) % 60, uptime % 60]
-				: [NSString stringWithFormat:@"%llu:%02llu:%02llu", uptime/60/60, (uptime/60) % 60, uptime % 60];
+	struct proc_bsdinfo info = {0};
+	int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
+	if (ret != sizeof(info))
+		return @"-1";
+
+	time_t now = time(NULL);
+	if (now < (time_t)info.pbi_start_tvsec)
+		return @"-1";
+
+	uint64_t uptime = (uint64_t)(now - (time_t)info.pbi_start_tvsec);
+	uint64_t days = uptime / 86400;
+	uint64_t hours = (uptime % 86400) / 3600;
+	uint64_t minutes = (uptime % 3600) / 60;
+	uint64_t seconds = uptime % 60;
+	return days ? [NSString stringWithFormat:@"%llud %02llu:%02llu:%02llu", days, hours, minutes, seconds]
+				: [NSString stringWithFormat:@"%llu:%02llu:%02llu", hours, minutes, seconds];
 }
 
 NSString *psProcessCpuTime(unsigned int ptime)
@@ -561,11 +572,11 @@ NSString *psProcessCpuTime(unsigned int ptime)
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_diskio_byteswritten); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_diskio_byteswritten); }
 			descr:@"Bytes written to disk since process launch."],
-		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Total Process Running Time" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
-			data:^NSString*(PSProc *proc) { return psProcessUptime(proc->rusage.ri_proc_start_abstime, proc->rusage.ri_proc_exit_abstime); }
+		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Process Uptime" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
+			data:^NSString*(PSProc *proc) { return psProcessUptime(proc.pid); }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_proc_start_abstime); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_proc_start_abstime); }
-			descr:@"Time elapsed since process launch."],
+			descr:@"Time since process launch, including sleep and suspension."],
 #endif
 //		[PSColumn psColumnWithName:@"More" fullname:@"More Data" align:NSTextAlignmentLeft width:170 tag:9999 style:0
 //			data:^NSString*(PSProc *proc) { return proc.moredata; }
