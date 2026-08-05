@@ -361,8 +361,8 @@
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_diskio_byteswritten); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_diskio_byteswritten); }
 			descr:@"Bytes written to disk since process launch."],
-		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Total Process Running Time" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
-			data:^NSString*(PSProc *proc) { return psProcessUptime(proc->rusage.ri_proc_start_abstime, proc->rusage.ri_proc_exit_abstime); }
+		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Process Uptime" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
+			data:^NSString*(PSProc *proc) { return psProcessUptime(proc.pid); }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_proc_start_abstime); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_proc_start_abstime); }
-			descr:@"Time elapsed since process launch."],
+			descr:@"Time since process launch, including sleep and suspension."],
