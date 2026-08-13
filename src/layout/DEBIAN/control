@@ -2,7 +2,7 @@ Package: cn.zqbb.cocoatop64.relaxin
 Name: CocoaTop64 Relaxin
 Replaces: ru.domo.cocoatop, ru.domo.cocoatop64, cn.zqbb.cocoatop64.inject.roothide, zp.cocoatop64.unject, zp.cocoatop64.unject.xina, zp.cocoatop64.inject
 Conflicts: ru.domo.cocoatop, ru.domo.cocoatop64, cn.zqbb.cocoatop64.inject.roothide, zp.cocoatop64.unject, zp.cocoatop64.unject.xina, zp.cocoatop64.inject
-Version: 2.3.3-1
+Version: 2.3.3-2
 Architecture: iphoneos-arm
 Description: Process Viewer for iOS GUI, updated for iOS 13 by SXX.
 Maintainer: SXX, Domo
