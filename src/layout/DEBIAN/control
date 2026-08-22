@@ -2,7 +2,7 @@ Package: cn.zqbb.ccatop.relaxin.whitelist
 Name: CocoaTop64 (Relaxin Whitelist)
 Replaces: ru.domo.cocoatop, ru.domo.cocoatop64, cn.zqbb.cocoatop64.inject.roothide, zp.cocoatop64.unject, zp.cocoatop64.unject.xina, zp.cocoatop64.inject, cn.zqbb.cocoatop64.relaxin
 Conflicts: ru.domo.cocoatop, ru.domo.cocoatop64, cn.zqbb.cocoatop64.inject.roothide, zp.cocoatop64.unject, zp.cocoatop64.unject.xina, zp.cocoatop64.inject, cn.zqbb.cocoatop64.relaxin
-Version: 2.3.3-2
+Version: 2.3.3-3
 Architecture: iphoneos-arm
 Description: Process Viewer for iOS GUI, updated for iOS 13 by SXX.
 Maintainer: SXX, Domo

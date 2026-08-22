@@ -575,7 +575,7 @@
 }
 - (BOOL)isWhitelistedForProcess:(PSProc *)proc
 {
-	NSString *processName = proc.name;
+	NSString *processName = [proc.executable lastPathComponent];
 	if (!processName.length)
 		return NO;
 		
