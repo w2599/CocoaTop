@@ -168,10 +168,10 @@ static bool psIsUserApp(PSProc *proc)
 - (void)updateWithProc:(PSProc *)proc columns:(NSArray *)columns
 {
 	self.textLabel.text = proc.name;
-	if (psIsUserApp(proc)) {
-		self.textLabel.textColor = [UIColor colorWithRed:0.12 green:0.5 blue:0.12 alpha:1.0];
-	} else if (proc.uid == 0) {
+	if (proc.uid == 0) {
 		self.textLabel.textColor = [UIColor colorWithRed:0.55 green:0.55 blue:1.0 alpha:1.0];
+	} else if (psIsUserApp(proc)) {
+		self.textLabel.textColor = [UIColor colorWithRed:0.12 green:0.5 blue:0.12 alpha:1.0];
 	}else if(@available(iOS 13, *)) {
 		self.textLabel.textColor = [UIColor labelColor];
 	}
