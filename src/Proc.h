@@ -5,6 +5,7 @@
 #define PRIVATE
 #import "Compat.h"
 #import "net/ntstat.h"
+#import "ProcessResources.h"
 
 // Display states determine grid row colors
 typedef enum {
@@ -54,6 +55,7 @@ typedef struct PSCounts {
 @public struct PSCounts netstat_prev;
 @public struct PSCounts netstat_cache;
 @public uint64_t rusageSampleTime;
+@public struct timeval startTime;
 }
 @property (assign) display_t display;
 @property (assign) pid_t pid;
@@ -82,10 +84,9 @@ typedef struct PSCounts {
 //@property (strong) NSMutableArray *cpuhistory;
 //@property (strong) NSString *moredata;
 @property (strong) PSProc *prev;		// Previous data for comparison
-+ (instancetype)psProcWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size;
-- (instancetype)psProcCopy;
++ (instancetype)psProcWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size resources:(const CTProcessResources *)resources;
 - (void)update;
-- (void)updateWithKinfo:(struct kinfo_proc *)ki;
+- (void)updateWithKinfo:(struct kinfo_proc *)ki resources:(const CTProcessResources *)resources;
 @end
 
 proc_state_t mach_state_order(struct thread_basic_info *tbi);

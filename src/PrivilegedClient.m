@@ -21,7 +21,7 @@ extern int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t *, uid_t);
 extern int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t *, uid_t);
 
 enum { CTMessageHello = 0x435400, CTMessageCall, CTMessageReply };
-enum { CTOpInfo = 1, CTOpFDInfo, CTOpRusage, CTOpArgs, CTOpTask, CTOpSignal };
+enum { CTOpInfo = 1, CTOpFDInfo, CTOpArgs = 4, CTOpTask, CTOpSignal, CTOpResources, CTOpResourceBatch };
 static const uint32_t CTMaxReply = 16 * 1024 * 1024;
 static const mach_msg_timeout_t CTTimeout = 3000;
 
@@ -49,6 +49,7 @@ typedef union {
 
 static pthread_mutex_t CTLock = PTHREAD_MUTEX_INITIALIZER;
 static mach_port_t CTService = MACH_PORT_NULL;
+static mach_port_t CTReplyPort = MACH_PORT_NULL;
 static CFAbsoluteTime CTLastFailure;
 
 // 创建只有本进程持有接收权的私有通道。
@@ -119,6 +120,17 @@ static void CTHandleRequest(const CTRequest *request)
         } else {
             errno = 0;
             switch (request->operation) {
+                case CTOpResources:
+                    if (request->capacity != sizeof(CTProcessResources)) { errno = EINVAL; break; }
+                    CTCollectProcessResources(request->pid, bytes);
+                    response.result = 0;
+                    response.data.size = sizeof(CTProcessResources);
+                    break;
+                case CTOpResourceBatch:
+                    if (request->capacity % sizeof(CTProcessResources)) { errno = EINVAL; break; }
+                    response.result = CTCollectResourceBatch(bytes, request->capacity / sizeof(CTProcessResources));
+                    if (response.result >= 0) response.data.size = response.result * sizeof(CTProcessResources);
+                    break;
                 case CTOpInfo:
                     response.result = proc_pidinfo(request->pid, request->flavor, request->argument, bytes, request->capacity);
                     if (response.result > 0 && bytes) response.data.size = MIN((uint32_t)response.result, request->capacity);
@@ -126,11 +138,6 @@ static void CTHandleRequest(const CTRequest *request)
                 case CTOpFDInfo:
                     response.result = proc_pidfdinfo(request->pid, request->fd, request->flavor, bytes, request->capacity);
                     if (response.result > 0 && bytes) response.data.size = MIN((uint32_t)response.result, request->capacity);
-                    break;
-                case CTOpRusage:
-                    if (request->flavor != RUSAGE_INFO_V2 || request->capacity != sizeof(struct rusage_info_v2)) { errno = EINVAL; break; }
-                    response.result = proc_pid_rusage(request->pid, RUSAGE_INFO_V2, bytes);
-                    if (!response.result) response.data.size = request->capacity;
                     break;
                 case CTOpArgs: {
                     int mib[] = {CTL_KERN, KERN_PROCARGS2, request->pid};
@@ -218,6 +225,8 @@ static void CTDisconnect(void)
 {
     if (CTService) mach_port_deallocate(mach_task_self(), CTService);
     CTService = MACH_PORT_NULL;
+    CTDestroyReceivePort(CTReplyPort);
+    CTReplyPort = MACH_PORT_NULL;
 }
 
 // 在退出或进入后台时关闭当前辅助会话。
@@ -278,13 +287,16 @@ static BOOL CTConnect(void)
     return CTService != MACH_PORT_NULL;
 }
 
-// 串行发送一次请求，复制返回快照并明确转移任务端口所有权。
+// 串行复用回复端口，异常时销毁以隔离迟到响应。
 static int CTCall(CTRequest request, void *bytes, size_t *size, mach_port_t *task)
 {
     pthread_mutex_lock(&CTLock);
     int result = -1, error = EIO;
     mach_port_t reply = MACH_PORT_NULL;
-    if (CTConnect()) reply = CTReceivePort();
+    if (CTConnect()) {
+        if (!CTReplyPort) CTReplyPort = CTReceivePort();
+        reply = CTReplyPort;
+    }
     if (reply) {
         request.header.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_MAKE_SEND_ONCE);
         request.header.msgh_size = sizeof(request);
@@ -315,7 +327,6 @@ static int CTCall(CTRequest request, void *bytes, size_t *size, mach_port_t *tas
             CTDisconnect();
             CTLastFailure = CFAbsoluteTimeGetCurrent();
         }
-        CTDestroyReceivePort(reply);
     }
     pthread_mutex_unlock(&CTLock);
     errno = error;
@@ -340,12 +351,34 @@ int CTProcPIDFDInfo(int pid, int fd, int flavor, void *buffer, int size)
     return MAX(result, 0);
 }
 
-// 读取进程资源用量，保留现有 V2 结构和采样方式。
-int CTProcPIDRusage(int pid, int flavor, struct rusage_info_v2 *usage)
+// 详情页面只采集当前进程，将文件计数和资源用量合并为一次往返。
+int CTReadProcessResources(pid_t pid, CTProcessResources *sample)
 {
-    if (!usage || flavor != RUSAGE_INFO_V2) { errno = EINVAL; return -1; }
-    CTRequest request = {.operation = CTOpRusage, .pid = pid, .flavor = flavor, .capacity = sizeof(*usage)};
-    return CTCall(request, usage, NULL, NULL);
+    if (!sample || pid < 0) { errno = EINVAL; return -1; }
+    CTRequest request = {.operation = CTOpResources, .pid = pid, .capacity = sizeof(*sample)};
+    size_t size = 0;
+    int result = CTCall(request, sample, &size, NULL);
+    if (result != 0 || size != sizeof(*sample)) return -1;
+    return 0;
+}
+
+// 一轮刷新只取一次快照，失败时由调用方回退到单进程采集。
+CTProcessResources *CTCopyResourceBatch(size_t capacity, size_t *count)
+{
+    if (!count || !capacity || capacity > CTMaxReply / sizeof(CTProcessResources)) return NULL;
+    *count = 0;
+    size_t bytes = capacity * sizeof(CTProcessResources);
+    CTProcessResources *samples = malloc(bytes);
+    if (!samples) return NULL;
+    CTRequest request = {.operation = CTOpResourceBatch, .capacity = (uint32_t)bytes};
+    size_t size = 0;
+    int result = CTCall(request, samples, &size, NULL);
+    if (result < 0 || (size_t)result > capacity || size != (size_t)result * sizeof(*samples)) {
+        free(samples);
+        return NULL;
+    }
+    *count = result;
+    return samples;
 }
 
 // 读取其他用户的进程参数，不开放任意 sysctl 写入。

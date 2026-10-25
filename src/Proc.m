@@ -13,13 +13,18 @@
 #import "sys/libproc.h"
 
 @implementation PSProc
+{
+    task_port_t cachedTask;
+}
 
-- (instancetype)initWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size
+// 初始化进程身份，并使用本轮共享资源快照。
+- (instancetype)initWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size resources:(const CTProcessResources *)resources
 {
 	if (self = [super init]) {
 		@autoreleasepool {
 			self.display = ProcDisplayStarted;
 			self.pid = ki->kp_proc.p_pid;
+			startTime = ki->kp_proc.p_starttime;
 			self.ppid = ki->kp_eproc.e_ppid;
 			self.dispQueue = [NSMutableDictionary new];
 //			self.cpuhistory = [NSMutableArray new];
@@ -57,20 +62,23 @@
 			if (!self.name || [firslCol isEqualToString:@"Executable Name"])
 				self.name = [self.executable lastPathComponent];
 			self.executable = [PSSymLink simplifyPathName:self.executable];
-			[self updateWithKinfo:ki];
+			[self updateWithKinfo:ki resources:resources];
 		}
 	}
 	return self;
 }
 
-+ (instancetype)psProcWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size
+// 创建带身份标记和资源快照的进程模型。
++ (instancetype)psProcWithKinfo:(struct kinfo_proc *)ki iconSize:(CGFloat)size resources:(const CTProcessResources *)resources
 {
-	return [[PSProc alloc] initWithKinfo:ki iconSize:size];
+	return [[PSProc alloc] initWithKinfo:ki iconSize:size resources:resources];
 }
 
-- (instancetype)psProcCopy
+// 复用上一帧对象，避免每轮为所有进程分配比较对象。
+- (void)savePreviousValues
 {
-	PSProc *proc = [PSProc new];
+	if (!self.prev) self.prev = [PSProc new];
+	PSProc *proc = self.prev;
 	proc.prio = self.prio;
 	proc.nice = self.nice;
 	proc.ptime = self.ptime;
@@ -81,12 +89,19 @@
 	proc.socks = self.socks;
 	memcpy(&proc->basic, &basic, sizeof(basic));
 	memcpy(&proc->events, &events, sizeof(events));
+	memcpy(&proc->power, &power, sizeof(power));
 	memcpy(&proc->rusage, &rusage, sizeof(rusage));
 	memcpy(&proc->netstat, &netstat, sizeof(netstat));
 	memcpy(&proc->events_prev, &events_prev, sizeof(events_prev));
+	memcpy(&proc->power_prev, &power_prev, sizeof(power_prev));
 	memcpy(&proc->rusage_prev, &rusage_prev, sizeof(rusage_prev));
 	memcpy(&proc->netstat_prev, &netstat_prev, sizeof(netstat_prev));
-	return proc;
+}
+
+// 进程模型移除时释放持有的只读任务端口。
+- (void)dealloc
+{
+    if (cachedTask) mach_port_deallocate(mach_task_self(), cachedTask);
 }
 
 // Thread states are sorted by priority, top priority becomes a "task state"
@@ -127,7 +142,8 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	return 0;
 }
 
-- (void)updateWithKinfo:(struct kinfo_proc *)ki
+// 更新内核进程属性，沿用同一轮的资源采样。
+- (void)updateWithKinfo:(struct kinfo_proc *)ki resources:(const CTProcessResources *)resources
 {
 	self.priobase = ki->kp_proc.p_priority;
 	self.flags = ki->kp_proc.p_flag;
@@ -140,37 +156,29 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	if (ki->kp_proc.p_stat == SSTOP) self.state = ProcStateDebugging;
 	if (ki->kp_proc.p_stat == SZOMB) self.state = ProcStateZombie;
 //	self.moredata = [NSString stringWithFormat:@"%x %x %x", ki->kp_proc.p_xstat, ki->kp_proc.p_acflag, ki->kp_proc.sigwait];
-	[self update];
+	[self updateWithResources:resources];
 }
 
+// 详情页面独立采样当前进程，不复用上一轮列表快照。
 - (void)update
 {
+	[self updateWithResources:NULL];
+}
+
+// 更新当前帧数据，批量采样缺失时只查询当前进程。
+- (void)updateWithResources:(const CTProcessResources *)resources
+{
 	uint64_t previousSampleTime = rusageSampleTime;
-	uint64_t currentSampleTime = mach_absolute_time();
 	// Mach task info
 	[self updateMachInfo];
-	// Open files count
-	self.files = self.socks = 0;
-	int bufSize = CTProcPIDInfo(self.pid, PROC_PIDLISTFDS, 0, 0, 0);
-	if (bufSize > 0) {
-		bufSize *= 2;
-		struct proc_fdinfo *fdinfo = (struct proc_fdinfo *)malloc(bufSize);
-		if (fdinfo) {
-			bufSize = CTProcPIDInfo(self.pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
-			if (bufSize > 0)
-				for (int i = 0; i < bufSize / PROC_PIDLISTFD_SIZE; i++) {
-					switch (fdinfo[i].proc_fdtype) {
-					case PROX_FDTYPE_SOCKET:
-						self.socks++;
-					case PROX_FDTYPE_VNODE:
-					case PROX_FDTYPE_PIPE:
-					case PROX_FDTYPE_KQUEUE:
-						self.files++; break;
-					}
-				}
-			free(fdinfo);
-		}
-	}
+    CTProcessResources local = {0};
+    if (!resources) {
+        if (CTReadProcessResources(self.pid, &local) != 0) local.usageResult = -1;
+        resources = &local;
+    }
+    uint64_t currentSampleTime = resources->sampleTime;
+    self.files = resources->files;
+    self.socks = resources->sockets;
 	// NetStat info
 	memcpy(&netstat_prev, &netstat, sizeof(netstat));
 	memcpy(&netstat, &netstat_cache, sizeof(netstat));
@@ -179,7 +187,8 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	memset(&rusage, 0, sizeof(rusage));
 //#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_7_0
     if (@available(iOS 7, *)) {
-        if (CTProcPIDRusage(self.pid, RUSAGE_INFO_V2, &rusage) == 0) {
+        if (resources->usageResult == 0) {
+            rusage = resources->usage;
             if (!rusage_prev.ri_proc_start_abstime)
                 // Fill in rusage_prev on first update
                 memcpy(&rusage_prev, &rusage, sizeof(rusage_prev));
@@ -202,14 +211,16 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 //#endif
 }
 
+// 复用当前进程的只读端口；端口失效后下一轮重新获取。
 - (void)updateMachInfo
 {
 	time_value_t total_time = {0};
 	task_port_t task;
 
-	self.prev = [self psProcCopy];
+	[self savePreviousValues];
 	// Task info
 	memcpy(&events_prev, &events, sizeof(events_prev));
+	memcpy(&power_prev, &power, sizeof(power_prev));
 	memset(&basic, 0, sizeof(basic));
 	self.threads = 0;
 	self.prio = 0;
@@ -217,11 +228,17 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	self.ptime = 0;
 
     extern kern_return_t _task_for_pid(pid_t pid, task_port_t *target);
-    if (_task_for_pid(self.pid, &task) != KERN_SUCCESS)
+    if (!cachedTask && _task_for_pid(self.pid, &cachedTask) != KERN_SUCCESS)
 		return;
+    task = cachedTask;
 	// Basic task info
 	unsigned int info_count = MACH_TASK_BASIC_INFO_COUNT;
-	if (task_info(task, MACH_TASK_BASIC_INFO, (task_info_t)&basic, &info_count) == KERN_SUCCESS) {
+    if (task_info(task, MACH_TASK_BASIC_INFO, (task_info_t)&basic, &info_count) != KERN_SUCCESS) {
+        mach_port_deallocate(mach_task_self(), cachedTask);
+        cachedTask = MACH_PORT_NULL;
+        return;
+    }
+	{
 		// Time
 		total_time = basic.user_time;
 		time_value_add(&total_time, &basic.system_time);
@@ -306,17 +323,15 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 				unsigned int prio = mach_thread_priority(thread_list[j], tbi.policy);
 				// Actual process priority will be the largest priority of a thread
 				if (self.prio < prio) self.prio = prio;
+				// 仅使用读取成功的线程状态，避免线程退出时读取未初始化数据。
+				proc_state_t thstate = mach_state_order(&tbi);
+				if (self.state > thstate) self.state = thstate;
 			}
-			// Task state is formed from all thread states
-			proc_state_t thstate = mach_state_order(&tbi);
-			if (self.state > thstate)
-				self.state = thstate;
 			mach_port_deallocate(mach_task_self(), thread_list[j]);
 		}
 		// Deallocate the list of threads
 		vm_deallocate(mach_task_self(), (vm_address_t)thread_list, sizeof(*thread_list) * thread_count);
 	}
-	mach_port_deallocate(mach_task_self(), task);
 	// Roundup time: 100's of a second
 	self.ptime = total_time.seconds * 100 + (total_time.microseconds + 5000) / 10000;
 //	[self.cpuhistory insertObject:[NSNumber numberWithUnsignedInt:self.pcpu] atIndex:0];

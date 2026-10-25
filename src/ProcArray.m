@@ -4,6 +4,7 @@
 #import <pwd.h>
 #import "ProcArray.h"
 #import "NetArray.h"
+#import "PrivilegedClient.h"
 
 @implementation PSProcInfo
 int sort_procs_by_pid(const void *p1, const void *p2)
@@ -74,13 +75,18 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 @end
 
 @implementation PSProcArray
+{
+    NSMutableDictionary<NSNumber *, PSProc *> *procsByPID;
+}
 
+// 初始化进程列表及共享的 PID 索引。
 - (instancetype)initProcArrayWithIconSize:(CGFloat)size
 {
 	self = [super init];
 	if (!self) return nil;
 	self.iconSize = size;
 	self.procs = [NSMutableArray arrayWithCapacity:300];
+    procsByPID = [NSMutableDictionary dictionaryWithCapacity:300];
 	self.nstats = [PSNetArray psNetArray];
 	NSProcessInfo *procinfo = [NSProcessInfo processInfo];
 	self.memTotal = procinfo.physicalMemory;
@@ -94,6 +100,7 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 	return [[PSProcArray alloc] initProcArrayWithIconSize:size];
 }
 
+// 读取内存统计并释放本次取得的 host 发送权。
 - (void)refreshMemStats
 {
 	mach_port_t host_port = mach_host_self();
@@ -110,6 +117,7 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 		self.memFree = vm_stat.free_count * pagesize;
 		self.memUsed = self.memTotal - self.memFree;
 	}
+    mach_port_deallocate(mach_task_self(), host_port);
 /*
 	host_cpu_load_info_data_t cpu_stat;
 	host_size = HOST_CPU_LOAD_INFO_COUNT;
@@ -119,6 +127,7 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 */
 }
 
+// 批量读取资源，按 PID 和启动时间复用仍属于同一进程的模型。
 - (int)refresh
 {
 	static uid_t mobileuid = 0;
@@ -128,28 +137,40 @@ int sort_procs_by_pid(const void *p1, const void *p2)
             mobileuid = mobile->pw_uid;
         }
 	}
+    PSProcInfo *procs = [PSProcInfo psProcInfoSort:NO];
+    if (procs->ret) return procs->ret;
 	// Reset totals
 	self.totalCpu = self.threadCount = self.portCount = self.machCalls = self.unixCalls = self.switchCount = self.runningCount = self.mobileCount = self.guiCount = 0;
 	// Remove terminated processes
 	[self.procs filterUsingPredicate:[NSPredicate predicateWithBlock: ^BOOL(PSProc *obj, NSDictionary *bind) {
 		return obj.display != ProcDisplayTerminated;
 	}]];
+    [procsByPID removeAllObjects];
+    for (PSProc *proc in self.procs) procsByPID[@(proc.pid)] = proc;
 	[self setAllDisplayed:ProcDisplayTerminated];
-	// Get process list and update the procs array
-	PSProcInfo *procs = [PSProcInfo psProcInfoSort:NO];
-	if (procs->ret)
-		return procs->ret;
+    size_t resourceCount = 0;
+    CTProcessResources *resources = CTCopyResourceBatch(procs->count + 128, &resourceCount);
 	for (int i = 0; i < procs->count; i++) {
 		pid_t thispid = procs->kp[i].kp_proc.p_pid;
 		// Do not include kernel process (pid 0) in the visible list
 		// if (thispid == 0) continue;
 
 		PSProc *proc = [self procForPid:thispid];
+        struct timeval started = procs->kp[i].kp_proc.p_starttime;
+        if (proc && (proc->startTime.tv_sec != started.tv_sec || proc->startTime.tv_usec != started.tv_usec)) {
+            [self.procs removeObjectIdenticalTo:proc];
+            [procsByPID removeObjectForKey:@(thispid)];
+            proc = nil;
+        }
+        CTProcessResources key = {.pid = thispid};
+        const CTProcessResources *sample = resources ? bsearch(&key, resources, resourceCount, sizeof(*resources), CTCompareResourcePID) : NULL;
+        if (sample && (sample->startTime.tv_sec != started.tv_sec || sample->startTime.tv_usec != started.tv_usec)) sample = NULL;
 		if (!proc) {
-			proc = [PSProc psProcWithKinfo:&procs->kp[i] iconSize:self.iconSize];
+			proc = [PSProc psProcWithKinfo:&procs->kp[i] iconSize:self.iconSize resources:sample];
 			[self.procs addObject:proc];
+            procsByPID[@(thispid)] = proc;
 		} else {
-			[proc updateWithKinfo:&procs->kp[i]];
+			[proc updateWithKinfo:&procs->kp[i] resources:sample];
 			proc.display = ProcDisplayUser;
 		}
 		// Compute totals
@@ -163,6 +184,7 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 		self.unixCalls += proc->events.syscalls_unix - proc->events_prev.syscalls_unix;
 		self.switchCount += proc->events.csw - proc->events_prev.csw;
 	}
+    free(resources);
 	[self refreshMemStats];
 	[self.nstats refresh:self];
 	self.procsFiltered = self.procs;
@@ -221,12 +243,10 @@ int sort_procs_by_pid(const void *p1, const void *p2)
 	return idx;
 }
 
+// 进程刷新及网络统计共用常数时间的 PID 查找。
 - (PSProc *)procForPid:(pid_t)pid
 {
-	NSUInteger idx = [self.procs indexOfObjectPassingTest:^BOOL(id proc, NSUInteger idx, BOOL *stop) {
-		return ((PSProc *)proc).pid == pid;
-	}];
-	return idx == NSNotFound ? nil : (PSProc *)self.procs[idx];
+    return procsByPID[@(pid)];
 }
 
 - (void)filter:(NSString *)text column:(PSColumn *)col
