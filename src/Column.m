@@ -9,6 +9,8 @@
 #import <sys/stat.h>
 #import <sys/fcntl.h>
 #import <mach/mach_time.h>
+#import "sys/libproc.h"
+#import "sys/proc_info.h"
 
 NSString *psProcessStateString(PSProc *proc)
 {
@@ -127,15 +129,24 @@ NSString *psSystemUptime()
 		return @"-";
 }
 
-NSString *psProcessUptime(uint64_t uptime, uint64_t exittime)
+NSString *psProcessUptime(pid_t pid)
 {
-	if (!uptime)
-		return @"-";
-	if (!exittime) exittime = mach_absolute_time();
-	uptime = mach_time_to_milliseconds(exittime - uptime) / 1000;
-	uint64_t days = uptime/60/60/24;
-	return days ? [NSString stringWithFormat:@"%llud %02llu:%02llu:%02llu", days, (uptime/60/60) % 24, (uptime/60) % 60, uptime % 60]
-				: [NSString stringWithFormat:@"%llu:%02llu:%02llu", uptime/60/60, (uptime/60) % 60, uptime % 60];
+	struct proc_bsdinfo info = {0};
+	int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
+	if (ret != sizeof(info))
+		return @"-1";
+
+	time_t now = time(NULL);
+	if (now < (time_t)info.pbi_start_tvsec)
+		return @"-1";
+
+	uint64_t uptime = (uint64_t)(now - (time_t)info.pbi_start_tvsec);
+	uint64_t days = uptime / 86400;
+	uint64_t hours = (uptime % 86400) / 3600;
+	uint64_t minutes = (uptime % 3600) / 60;
+	uint64_t seconds = uptime % 60;
+	return days ? [NSString stringWithFormat:@"%llud %02llu:%02llu:%02llu", days, hours, minutes, seconds]
+				: [NSString stringWithFormat:@"%llu:%02llu:%02llu", hours, minutes, seconds];
 }
 
 NSString *psProcessCpuTime(unsigned int ptime)
@@ -197,7 +208,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
         }
 #if TARGET_IPHONE_SIMULATOR
 		allColumns = @[
-		[PSColumn psColumnWithName:@"Command line" fullname:@"Command line" align:NSTextAlignmentLeft width:170 tag:0 style:ColumnStylePathTrunc | ColumnStyleTooLong
+		[PSColumn psColumnWithName:@"Command line" fullname:@"Command line" align:NSTextAlignmentLeft width:160 tag:0 style:ColumnStylePathTrunc | ColumnStyleTooLong
 			data:^NSString*(PSProc *proc) { return [proc.executable stringByAppendingString:proc.args]; }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { return [a.name caseInsensitiveCompare:b.name]; }
 			summary:^NSString*(PSProcArray* procs) { return [NSString stringWithFormat:procs.count == procs.totalCount ? @"Total processes: %lu" : @"Shown processes: %lu", (unsigned long)procs.count]; }
@@ -214,7 +225,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE(ppid); } summary:nil
 			descr:@"Unique ID of process' parent - the one that called exec()/fork().\n\n"
 				"On iOS most processes are jobs, thus they are launched by launchd and have parent pid 1."],
-		[PSColumn psColumnWithName:@"%" fullname:@"%CPU Usage" align:NSTextAlignmentRight width:50 tag:3 style:ColumnStyleSortDesc | ColumnStyleColor
+		[PSColumn psColumnWithName:@"%" fullname:@"%CPU Usage" align:NSTextAlignmentRight width:40 tag:3 style:ColumnStyleSortDesc | ColumnStyleColor
 			data:^NSString*(PSProc *proc) { return !proc.pcpu ? @"-" : [NSString stringWithFormat:@"%.1f", (float)proc.pcpu / 10]; }
 			floatData:^double(PSProc *proc) { return (double)proc.pcpu / 10; }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE(pcpu); }
@@ -374,7 +385,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 			descr:@"The base thread priority of a process.\n\n"
 				"This is the default priority set for newly created threads. Tap the process and go to "
 				"'Threads' pane to see actual priorities and scheduling schemes of existing threads."],
-		[PSColumn psColumnWithName:@"Nice" fullname:@"Process Nice Value" align:NSTextAlignmentRight width:42 tag:19 style:ColumnStyleColor
+		[PSColumn psColumnWithName:@"Nice" fullname:@"Process Nice Value" align:NSTextAlignmentRight width:30 tag:19 style:ColumnStyleColor
 			data:^NSString*(PSProc *proc) { return [NSString stringWithFormat:@"%d", proc.nice]; } floatData:^double(PSProc *proc) { return proc.nice; }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE(nice); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF(nice); }
@@ -561,11 +572,11 @@ NSString *psProcessCpuTime(unsigned int ptime)
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_diskio_byteswritten); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_diskio_byteswritten); }
 			descr:@"Bytes written to disk since process launch."],
-		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Total Process Running Time" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
-			data:^NSString*(PSProc *proc) { return psProcessUptime(proc->rusage.ri_proc_start_abstime, proc->rusage.ri_proc_exit_abstime); }
+		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Process Uptime" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
+			data:^NSString*(PSProc *proc) { return psProcessUptime(proc.pid); }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_proc_start_abstime); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_proc_start_abstime); }
-			descr:@"Time elapsed since process launch."],
+			descr:@"Time since process launch, including sleep and suspension."],
 #endif
 //		[PSColumn psColumnWithName:@"More" fullname:@"More Data" align:NSTextAlignmentLeft width:170 tag:9999 style:0
 //			data:^NSString*(PSProc *proc) { return proc.moredata; }
@@ -661,7 +672,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 		[PSColumn psColumnWithName:@"Mapped module" fullname:@"Module Filename" align:NSTextAlignmentLeft width:220 tag:4000 style:ColumnStylePathTrunc | ColumnStyleTooLong
 			data:^NSString*(PSSockModules *sock) { return sock.name; }
 			sort:^NSComparisonResult(PSSockModules *a, PSSockModules *b) { return [a.bundle caseInsensitiveCompare:b.bundle]; } summary:nil],
-		[PSColumn psColumnWithName:@"Address" fullname:@"Loaded Virtual Address" align:NSTextAlignmentRight width:90 tag:4001 style:ColumnStyleMonoFont | ColumnStyleLowSpace
+		[PSColumn psColumnWithName:@"Address" fullname:@"Loaded Virtual Address" align:NSTextAlignmentRight width:80 tag:4001 style:ColumnStyleMonoFont
 			data:^NSString*(PSSockModules *sock) { return [NSString stringWithFormat:@"%llX", sock.addr]; }
 			sort:^NSComparisonResult(PSSockModules *a, PSSockModules *b) { COMPARE(addr); } summary:nil],
 		[PSColumn psColumnWithName:@"Size" fullname:@"Mapped size" align:NSTextAlignmentRight width:60 tag:4002 style:ColumnStyleSortDesc

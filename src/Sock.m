@@ -72,11 +72,24 @@ static UIColor *_greenColor() {
 
 kern_return_t
 _task_for_pid(pid_t pid, task_port_t *target) {
-    kern_return_t ret = task_for_pid(mach_task_self(), pid, target);
-    if (ret != KERN_SUCCESS && pid == 0) {
-        ret = host_get_special_port(mach_host_self(), HOST_LOCAL_NODE, 4, target);
-    }
-    return ret;
+	if (!target)
+		return KERN_INVALID_ARGUMENT;
+	*target = MACH_PORT_NULL;
+
+	typedef kern_return_t (*task_read_for_pid_t)(mach_port_t, pid_t, task_port_t *);
+	static task_read_for_pid_t taskReadForPid;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		taskReadForPid = (task_read_for_pid_t)dlsym(RTLD_DEFAULT, "task_read_for_pid");
+	});
+
+	kern_return_t ret = taskReadForPid ? taskReadForPid(mach_task_self(), pid, target)
+		: task_for_pid(mach_task_self(), pid, target);
+	if (ret != KERN_SUCCESS && pid == 0 && !taskReadForPid)
+		ret = host_get_special_port(mach_host_self(), HOST_LOCAL_NODE, 4, target);
+	if (ret != KERN_SUCCESS || *target == MACH_PORT_NULL)
+		*target = MACH_PORT_NULL;
+	return ret;
 }
 
 NSString *psGetProcessName(struct extern_proc *ep)
@@ -924,11 +937,15 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        OSKextCopyLoadedKextInfo = dlsym(nil, "_OSKextCopyLoadedKextInfo");
+		void *handle = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_LAZY);
+		if (handle)
+			OSKextCopyLoadedKextInfo = dlsym(handle, "OSKextCopyLoadedKextInfo");
     });
     
 	// For the kernel task we will show loaded kernel extensions
 	if (socks.proc.pid == 0) {
+			if (!OSKextCopyLoadedKextInfo)
+				return ENOTSUP;
 		if (!socks.objects) {
 			// CFBundleVersion OSBundleStarted
 			NSArray *infoKeys = @[@"CFBundleIdentifier", @"OSBundleExecutablePath", @"OSBundleLoadAddress", @"OSBundleLoadSize", @"OSBundleLoadTag", @"OSBundleRetainCount"];

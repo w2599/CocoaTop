@@ -3,6 +3,7 @@
 #import <mach/thread_info.h>
 #import <mach/mach_interface.h>
 #import <mach/mach_port.h>
+#import <mach/mach_time.h>
 #import "Compat.h"
 #import "Proc.h"
 #import "CocoaTopPreferences.h"
@@ -28,7 +29,7 @@
 			if (proc_pidpath(self.pid, buffer, sizeof(buffer)))
 				self.executable = [NSString stringWithUTF8String:buffer];
 			else
-				self.executable = args[0];
+				self.executable = self.pid == 0 ? @"/kernel_task" : args[0];
 			self.args = @"";
 			for (int i = 1; i < args.count; i++)
 				self.args = [self.args stringByAppendingFormat:@" %@", args[i]];
@@ -143,6 +144,8 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 
 - (void)update
 {
+	uint64_t previousSampleTime = rusageSampleTime;
+	uint64_t currentSampleTime = mach_absolute_time();
 	// Mach task info
 	[self updateMachInfo];
 	// Open files count
@@ -184,6 +187,15 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
                 basic.resident_size = rusage.ri_resident_size;
             if (!self.ptime)
                 self.ptime = mach_time_to_milliseconds(rusage.ri_user_time + rusage.ri_system_time) / 10;	// 100's of a second
+			if (self.pid == 0 && previousSampleTime && currentSampleTime > previousSampleTime) {
+				uint64_t currentCpuTime = rusage.ri_user_time + rusage.ri_system_time;
+				uint64_t previousCpuTime = rusage_prev.ri_user_time + rusage_prev.ri_system_time;
+				if (currentCpuTime >= previousCpuTime) {
+					self.pcpu = (unsigned int)MIN((uint64_t)UINT_MAX,
+						(currentCpuTime - previousCpuTime) * 1000 / (currentSampleTime - previousSampleTime));
+				}
+			}
+			rusageSampleTime = currentSampleTime;
         }
     }
 //#endif
