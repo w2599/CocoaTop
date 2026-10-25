@@ -3,4 +3,5 @@
 #import "PopupMenuView.h"
 
 @interface RootViewController : UITableViewControllerWithMenu<UISearchBarDelegate>
+- (BOOL)shouldShowFooter;
 @end

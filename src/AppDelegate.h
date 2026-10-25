@@ -11,4 +11,6 @@
     RootViewController *controller;
 }
 
+- (void)setBottomMaskVisible:(BOOL)visible;
+
 @end

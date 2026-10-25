@@ -1,4 +1,4 @@
 #import <UIKit/UIKit.h>
 
-@interface SetupViewController : UITableViewController<UIAlertViewDelegate>
+@interface SetupViewController : UITableViewController
 @end

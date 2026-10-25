@@ -1,24 +1,42 @@
 #import "THtmlViewController.h"
 #import "BackButtonHandler.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 @implementation HtmlViewController
+
+- (void)loadView
+{
+	self.view = [[UIWebView alloc] initWithFrame:UIScreen.mainScreen.bounds];
+}
 
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
 	self.navigationItem.title = self.pageTitle;
-	self.indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+	self.indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
 	self.indicator.color = [UIColor blackColor];
 	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:self.indicator];
 
-	UIWebView *webView = [[UIWebView alloc] initWithFrame:CGRectZero];
+	UIWebView *webView = (UIWebView *)self.view;
 	webView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-	webView.dataDetectorTypes = UIDataDetectorTypeNone;
-	webView.scalesPageToFit = YES;
 	webView.delegate = self;
+	webView.opaque = YES;
+	webView.backgroundColor = [UIColor whiteColor];
+	if (!self.url) {
+		[webView loadHTMLString:@"<html><body><p>Page resource not found.</p></body></html>" baseURL:nil];
+		return;
+	}
 
-	[webView loadRequest:[[NSURLRequest alloc] initWithURL:self.url]];
-	self.view = webView;
+	NSError *error = nil;
+	NSData *data = [NSData dataWithContentsOfURL:self.url options:0 error:&error];
+	NSString *html = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : nil;
+	if (html.length > 0) {
+		[webView loadHTMLString:html baseURL:self.url.URLByDeletingLastPathComponent];
+	} else {
+		[webView loadHTMLString:@"<html><body><p>Unable to load this page.</p></body></html>" baseURL:nil];
+	}
 }
 
 - (BOOL)navigationShouldPopOnBackButton
@@ -41,6 +59,11 @@
 	[self.indicator stopAnimating];
 }
 
+- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error
+{
+	[self.indicator stopAnimating];
+}
+
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
 {
 	return interfaceOrientation != UIInterfaceOrientationPortraitUpsideDown;
@@ -57,3 +80,5 @@
 }
 
 @end
+
+#pragma clang diagnostic pop

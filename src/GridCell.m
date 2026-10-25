@@ -108,7 +108,7 @@ static bool psIsUserApp(PSProc *proc)
 	if (self.dividers)
 		for (UIView *item in self.dividers) [item removeFromSuperview];
 	// Create new views
-	self.labels = [NSMutableArray arrayWithCapacity:columns.count-1];
+	self.labels = [NSMutableArray arrayWithCapacity:columns.count > 0 ? columns.count - 1 : 0];
 	self.dividers = [NSMutableArray arrayWithCapacity:columns.count];
 	self.extendArgsLabel = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"FullWidthCommandLine"] boolValue];
 	self.colorDiffs = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ColorDiffs"] boolValue];
@@ -250,10 +250,21 @@ static bool psIsUserApp(PSProc *proc)
 {
     if (@available(iOS 6.0, *)) {
         self = [super initWithReuseIdentifier:@"Header"];
-        self.backgroundView = [[NSClassFromString(@"_UITableViewHeaderFooterView") alloc] initWithFrame:self.bounds];
+        self.backgroundView = [[UIView alloc] initWithFrame:self.bounds];
     } else {
         self = [super initWithReuseIdentifier:@"Header"];
     }
+	if (@available(iOS 13, *)) {
+		UIColor *backgroundColor = [UIColor systemGray5Color];
+		self.backgroundColor = backgroundColor;
+		self.backgroundView.backgroundColor = backgroundColor;
+		self.contentView.backgroundColor = backgroundColor;
+	} else {
+		UIColor *backgroundColor = [UIColor colorWithWhite:.9 alpha:1];
+		self.backgroundColor = backgroundColor;
+		self.backgroundView.backgroundColor = backgroundColor;
+		self.contentView.backgroundColor = backgroundColor;
+	}
     
 	self.labels = [NSMutableArray arrayWithCapacity:columns.count];
 	self.dividers = [NSMutableArray arrayWithCapacity:columns.count];

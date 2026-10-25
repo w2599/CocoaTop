@@ -153,7 +153,10 @@ NSString *psGetProcessName(struct extern_proc *ep)
 
 int stack_snapshot(int pid, char *tracebuf, int bufsize, int options)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	return syscall(SYS_stack_snapshot, pid, tracebuf, bufsize, options);
+#pragma clang diagnostic pop
 }
 
 @implementation PSSockThreads
@@ -702,7 +705,7 @@ void dump(unsigned char *b, int s)
 	xpc_dictionary_set_uint64(xpc_in, "subsystem", 3);
 	xpc_dictionary_set_uint64(xpc_in, "type", 1);
 	xpc_dictionary_set_fd(xpc_in, "fd", hpipe[1]);
-	xpc_pipe_t xp = xpc_pipe_create_from_port(bootstrap_port, 0);
+	xpc_pipe_t xp = xpc_pipe_create_from_port ? xpc_pipe_create_from_port(bootstrap_port, 0) : NULL;
 //	xpc_pipe_t xp = (xpc_pipe_t)_os_alloc_once_table[1].ptr[3];
 //#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_6_0
     if (@available(iOS 6, *)) {
@@ -728,9 +731,8 @@ void dump(unsigned char *b, int s)
             }
         });
         
-        if (xpc_pipe_routine(xp, xpc_in, &xpc_out) || !xpc_dictionary_get_int64(xpc_out, "error")) {
-            xpc_release(xpc_in);
-            xpc_in = nil;
+		if (!xp || !xpc_pipe_routine || xpc_pipe_routine(xp, xpc_in, &xpc_out) || !xpc_out || !xpc_dictionary_get_int64(xpc_out, "error")) {
+			xpc_in = nil;
             close(hpipe[1]);
             hpipe[1] = -1;
             dispatch_sync(launchd_pipe_queue, ^{});
@@ -764,9 +766,12 @@ void dump(unsigned char *b, int s)
             free(buf);
         }
     }
-	if (xpc_in) xpc_release(xpc_in);
-	if (xpc_out) xpc_release(xpc_out);
-	xpc_release(xp);
+	xpc_in = nil;
+	xpc_out = nil;
+	if (xp && xpc_pipe_invalidate) {
+		xpc_pipe_invalidate(xp);
+		xp = NULL;
+	}
     if (hpipe[0] != -1) {
         close(hpipe[0]);
     }

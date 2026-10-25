@@ -99,17 +99,15 @@
 	return interfaceOrientation != UIInterfaceOrientationPortraitUpsideDown;
 }
 
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
-{
-	if (buttonIndex == 1) {
-		[[CocoaTopPreferences sharedPreferences] reset];
-		[self.tableView reloadData];
-	}
-}
-
 - (IBAction)factoryReset
 {
-	[[[UIAlertView alloc] initWithTitle:@"Reset" message:@"Reset settings to default values?" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"OK", nil] show];
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Reset" message:@"Reset settings to default values?" preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+		[[CocoaTopPreferences sharedPreferences] reset];
+		[self.tableView reloadData];
+	}]];
+	[self presentViewController:alert animated:YES completion:nil];
 }
 
 - (void)viewDidLoad

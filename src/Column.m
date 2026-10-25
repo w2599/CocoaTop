@@ -592,6 +592,8 @@ NSString *psProcessCpuTime(unsigned int ptime)
 	NSArray *columnOrder = [[CocoaTopPreferences sharedPreferences] objectForKey:@"Columns"];
 	NSMutableArray *shownCols = [NSMutableArray array];
 	PSColumn *extendedcol = nil;
+	if (width == 0)
+		width = (NSUInteger)[UIScreen mainScreen].bounds.size.width;
 	// Sanity check
 	if (columnOrder.count == 0)
 		columnOrder = @[@0, @1, @3, @5, @7, @20];
@@ -695,7 +697,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 	PSColumn *extendedcol = nil;
 	NSUInteger width = fullwidth;
 	for (PSColumn *col in cols) {
-		if ((col.style & ColumnStyleLowSpace) && UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone && fullwidth < 400)
+		if ((col.style & ColumnStyleLowSpace) && [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone && fullwidth < 400)
 			col.width = 0;
 		else
 			col.width = col.minwidth;
@@ -705,7 +707,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 	}
 	if (extendedcol)
 		extendedcol.width = extendedcol.minwidth + width;
-	if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone)
+	if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
 		[cols filterUsingPredicate:[NSPredicate predicateWithBlock: ^BOOL(PSColumn *obj, NSDictionary *bind) {
 			return obj.width != 0;
 		}]];

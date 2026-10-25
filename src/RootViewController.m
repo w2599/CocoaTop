@@ -84,12 +84,13 @@
 {
 	if (!gestureRecognizer || gestureRecognizer.state == UIGestureRecognizerStateEnded) {
 		fullScreen = !self.navigationController.navigationBarHidden;
+		[self updateBottomMask];
+		[self setNeedsStatusBarAppearanceUpdate];
 		// This "scrolls" tableview so that it doesn't actually move when the bars disappear
 		if (!fullScreen) {			// Show navbar & scrollbar (going out of fullscreen)
-			[[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone];
 			[self.navigationController setNavigationBarHidden:NO animated:NO];
 		}
-		CGSize size = [UIApplication sharedApplication].statusBarFrame.size;
+		CGSize size = self.view.window.windowScene.statusBarManager.statusBarFrame.size;
 		CGFloat slide = MIN(size.width, size.height) +
 			self.navigationController.navigationBar.frame.size.height +
 			([[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowHeader"] boolValue] ? self.tableView.sectionHeaderHeight : 0);
@@ -98,17 +99,25 @@
 		[self.tableView setContentOffset:contentOffset animated:NO];
 		if (fullScreen) {			// Hide navbar & scrollbar (entering fullscreen)
 			[self.navigationController setNavigationBarHidden:YES animated:NO];
-			[[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
 		}
 		[self.tableView reloadData];
 //		[timer fire];
 	}
 }
 
+- (BOOL)prefersStatusBarHidden
+{
+	return fullScreen;
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle
+{
+	return UIStatusBarStyleDefault;
+}
+
 - (void)viewDidLoad {
 	[super viewDidLoad];
-	[UIApplication sharedApplication].statusBarStyle = UIStatusBarStyleDefault;
-	bool isPhone = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone;
+	bool isPhone = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone;
 
 //	self.wantsFullScreenLayout = YES;
 	[self popupMenuWithItems:@[@"Settings", @"Columns", @"Quick Guide", @"About"] selected:-1 aligned:UIControlContentHorizontalAlignmentLeft];
@@ -118,6 +127,8 @@
 		target:self action:@selector(refreshProcs:)];
 	statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.frame.size.width - (isPhone ? 80 : 150), 40)];
 	statusLabel.backgroundColor = [UIColor clearColor];
+	statusLabel.adjustsFontSizeToFitWidth = YES;
+	statusLabel.minimumScaleFactor = 0.6;
 	self.navigationItem.leftBarButtonItems = @[self.navigationItem.leftBarButtonItem, [[UIBarButtonItem alloc] initWithCustomView:statusLabel]];
 
 	UITapGestureRecognizer *twoTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideShowNavBar:)];
@@ -148,6 +159,9 @@
     self.tableView.rowHeight = 44;
     self.tableView.sectionHeaderHeight = 23;
     self.tableView.sectionFooterHeight = 23;
+	if (@available(iOS 15.0, *)) {
+		self.tableView.sectionHeaderTopPadding = 0;
+	}
 	self.tableView.tableHeaderView = filter;
     self.tableView.tableFooterView = [[UIView alloc] initWithFrame: CGRectZero];
 
@@ -248,18 +262,7 @@
 //			(float)procs.memTotal / 1024 / 1024,
 //			(float)procs.totalCpu / 10];
 //    }
-    bool shortLabel;
-    if (@available(iOS 8, *)) {
-        UIUserInterfaceSizeClass sizeClass;
-        if (self.view.window == nil) {
-            sizeClass = [UIApplication sharedApplication].keyWindow.traitCollection.horizontalSizeClass;
-        } else {
-            sizeClass = self.view.window.traitCollection.horizontalSizeClass;
-        }
-        shortLabel = (sizeClass == UIUserInterfaceSizeClassCompact);
-    } else {
-        shortLabel = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone;
-    }
+	bool shortLabel = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone;
     
     if (shortLabel) {
         statusLabel.frame = CGRectMake(statusLabel.frame.origin.x, statusLabel.frame.origin.y, self.tableView.frame.size.width - 80, 40);
@@ -349,7 +352,9 @@
 	if (!indexPath) return;
 	PSProc *p = procs[indexPath.row];
 	if (!p || !p.executable || p.executable.length == 0) {
-		[[[UIAlertView alloc] initWithTitle:@"提示" message:@"无可用路径" delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil] show];
+		UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示" message:@"无可用路径" preferredStyle:UIAlertControllerStyleAlert];
+		[alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:nil]];
+		[self presentViewController:alert animated:YES completion:nil];
 		return;
 	}
 	UIPasteboard *pb = [UIPasteboard generalPasteboard];
@@ -367,7 +372,7 @@
 {
 	// When configId changes, all cells are reconfigured
 	configId++;
-	columns = [PSColumn psGetShownColumnsWithWidth:UIApplication.sharedApplication.keyWindow.bounds.size.width];
+	columns = [PSColumn psGetShownColumnsWithWidth:self.view.window.bounds.size.width];
 	// Find sort column and create table header
 	filterColumn = [PSColumn psColumnWithTag:[[[CocoaTopPreferences sharedPreferences] objectForKey:@"FilterColumn"] integerValue]];
 	[self searchBarTextDidEndEditing:filter];
@@ -389,6 +394,7 @@
         configChange = configCheck;
     }
     [self columnConfigChanged];
+	[self updateBottomMask];
     // Hide filter bar
     CGFloat minOffset = filter.frame.size.height - self.tableView.realUIContentInset.top;
     if (self.tableView.contentOffset.y < minOffset)
@@ -398,24 +404,21 @@
     [self refreshProcs:nil];
 }
 
+- (void)updateBottomMask
+{
+	if ([self.parentViewController respondsToSelector:@selector(setBottomMaskVisible:)])
+		[(RootTabMaskController *)self.parentViewController setBottomMaskVisible:[self shouldShowFooter]];
+}
+
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     if (self.view.window != nil) {
         if (@available(iOS 8, *)) {
             if (lastHorizationWindowSizeClass != self.view.window.traitCollection.horizontalSizeClass || lastHorizationWindowWidth != self.view.bounds.size.width) {
-                if (self.view.window.traitCollection.horizontalSizeClass == UIUserInterfaceSizeClassCompact) {
+				if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone) {
                     statusLabel.frame = CGRectMake(statusLabel.frame.origin.x, statusLabel.frame.origin.y, self.tableView.frame.size.width - 80, 40);
-                    statusLabel.text = [NSString stringWithFormat:@"Free: %.1f MB  CPU: %.1f%%",
-                    (float)procs.memFree / 1024 / 1024,
-                    (float)procs.totalCpu / 10];
                 } else {
                     statusLabel.frame = CGRectMake(statusLabel.frame.origin.x, statusLabel.frame.origin.y, self.tableView.frame.size.width - 150, 40);
-                    statusLabel.text = [NSString stringWithFormat:@"Processes: %lu   Threads: %lu   Free: %.1f/%.1f MB   CPU: %.1f%%",
-                    (unsigned long)procs.totalCount,
-                    (unsigned long)procs.threadCount,
-                    (float)procs.memFree / 1024 / 1024,
-                    (float)procs.memTotal / 1024 / 1024,
-                    (float)procs.totalCpu / 10];
                 }
                 lastHorizationWindowSizeClass = self.view.window.traitCollection.horizontalSizeClass;
                 lastHorizationWindowWidth = self.view.bounds.size.width;
@@ -440,6 +443,7 @@
 - (void)viewDidDisappear:(BOOL)animated
 {
 	[super viewDidDisappear:animated];
+	statusLabel.text = nil;
 	if (timer.isValid)
 		[timer invalidate];
 	header = nil;
@@ -468,17 +472,22 @@
 #pragma mark Table view data source
 
 // Section header/footer will be used as a grid header/footer
+- (BOOL)shouldShowFooter
+{
+	return [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowFooter"] boolValue] && !fullScreen;
+}
+
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
 { return [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowHeader"] boolValue] && !fullScreen ? header : nil; }
 
 - (UIView *)tableView:(UITableView *)tableView viewForFooterInSection:(NSInteger)section
-{ return [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowFooter"] boolValue] && !fullScreen ? footer : nil; }
+{ return [self shouldShowFooter] ? footer : nil; }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
 { return [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowHeader"] boolValue] && !fullScreen ? self.tableView.sectionHeaderHeight : 0; }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section
-{ return [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowFooter"] boolValue] && !fullScreen ? self.tableView.sectionFooterHeight : 0; }
+{ return [self shouldShowFooter] ? self.tableView.sectionFooterHeight : 0; }
 
 // Customize the number of sections in the table view.
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -557,7 +566,9 @@
 	// task_terminate(task)
 	if (kill(proc.pid, sig)) {
 		NSString *msg = [NSString stringWithFormat:@"Error %d while terminating app", errno];
-		[[[UIAlertView alloc] initWithTitle:proc.name message:msg delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+		UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc.name message:msg preferredStyle:UIAlertControllerStyleAlert];
+		[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+		[self presentViewController:alert animated:YES completion:nil];
 	}
 	// Refresh immediately to show process termination
 	tableView.editing = NO;
@@ -623,7 +634,9 @@
 	BOOL wantsWhiteList = ![self isWhitelistedForProcess:proc];
 	if (![self setWhitelisted:wantsWhiteList forProcess:proc]) {
 		NSString *message = [NSString stringWithFormat:@"无法写入 %@", ROOTHIDE_WHITELIST_PATH];
-		[[[UIAlertView alloc] initWithTitle:proc.name message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+		UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc.name message:message preferredStyle:UIAlertControllerStyleAlert];
+		[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
+		[self presentViewController:alert animated:YES completion:nil];
 		return;
 	}
 }

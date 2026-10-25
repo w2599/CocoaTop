@@ -1,5 +1,6 @@
 #import "AppDelegate.h"
 #import "RootViewController.h"
+#import "CocoaTopPreferences.h"
 
 @implementation RootTabMaskController
 
@@ -15,7 +16,7 @@
     [super viewDidLoad];
     [self.view addSubview: controller.view];
     if (@available(iOS 11, *)) {
-        mask = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+        mask = [[UIView alloc] initWithFrame:CGRectZero];
         mask.translatesAutoresizingMaskIntoConstraints = NO;
         if (@available(iOS 13, *)) {
             mask.backgroundColor = [UIColor colorWithDynamicProvider:^(UITraitCollection *collection) {
@@ -28,8 +29,8 @@
         } else {
             mask.backgroundColor = [UIColor colorWithWhite:.75 alpha:.85];
         }
-        [self.view addSubview: mask];
-        [self.view bringSubviewToFront: mask];
+        [self.view addSubview:mask];
+        [self setBottomMaskVisible:[[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowFooter"] boolValue]];
     }
 }
 
@@ -37,17 +38,21 @@
     [super viewWillLayoutSubviews];
     if (@available(iOS 11, *)) {
         UIEdgeInsets insets = self.view.safeAreaInsets;
-        if (insets.bottom != 0) {
-            mask.hidden = false;
+        if (!mask.hidden && insets.bottom != 0) {
             mask.frame = CGRectMake(0, self.view.bounds.size.height - insets.bottom, self.view.bounds.size.width, insets.bottom);
-            [self.view bringSubviewToFront: mask];
         } else {
-            mask.hidden = true;
+            mask.frame = CGRectZero;
         }
     }
     if (controller.view != nil) {
         controller.view.frame = self.view.frame;
     }
+}
+
+- (void)setBottomMaskVisible:(BOOL)visible
+{
+    mask.hidden = !visible;
+    [self.view setNeedsLayout];
 }
 
 @end

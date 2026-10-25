@@ -63,12 +63,12 @@ NSURL *open2URL;
 {
 	if (!gestureRecognizer || gestureRecognizer.state == UIGestureRecognizerStateEnded) {
 		fullScreen = !self.navigationController.navigationBarHidden;
+		[self setNeedsStatusBarAppearanceUpdate];
 		// This "scrolls" tableview so that it doesn't actually move when the bars disappear
 		if (!fullScreen) {			// Show navbar & scrollbar (going out of fullscreen)
-			[[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone];
 			[self.navigationController setNavigationBarHidden:NO animated:NO];
 		}
-		CGSize size = [UIApplication sharedApplication].statusBarFrame.size;
+		CGSize size = self.view.window.windowScene.statusBarManager.statusBarFrame.size;
 		CGFloat slide = MIN(size.width, size.height) +
 			self.navigationController.navigationBar.frame.size.height +
 			([[[CocoaTopPreferences sharedPreferences] objectForKey:@"ShowHeader"] boolValue] ? self.tableView.sectionHeaderHeight : 0);
@@ -77,10 +77,19 @@ NSURL *open2URL;
 		[self.tableView setContentOffset:contentOffset animated:NO];
 		if (fullScreen) {			// Hide navbar & scrollbar (entering fullscreen)
 			[self.navigationController setNavigationBarHidden:YES animated:NO];
-			[[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
 		}
 		[timer fire];
 	}
+}
+
+- (BOOL)prefersStatusBarHidden
+{
+	return fullScreen;
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle
+{
+	return UIStatusBarStyleDefault;
 }
 
 - (void)viewDidLoad
@@ -103,6 +112,9 @@ NSURL *open2URL;
     self.tableView.rowHeight = 44;
     self.tableView.sectionHeaderHeight = 23;
     self.tableView.sectionFooterHeight = 23;
+	if (@available(iOS 15.0, *)) {
+		self.tableView.sectionHeaderTopPadding = 0;
+	}
     self.tableView.tableFooterView = [[UIView alloc] initWithFrame: CGRectZero];
 //    if (@available(iOS 13, *)) {
 //        self.tableView.backgroundColor = [UIColor colorWithDynamicProvider:^(UITraitCollection *collection) {
@@ -355,35 +367,31 @@ NSURL *open2URL;
 	messageCopy = [(viewMode == ColumnModeSummary) ? sock.col.getData(sock.proc) : (viewMode == ColumnModeModules) ? sock.name : sock.description stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 	if (viewMode == ColumnModePorts)
 		message = [[message stringByReplacingOccurrencesOfString:@" <" withString:@"\n<"] stringByReplacingOccurrencesOfString:@" >" withString:@"\n>"];
-	NSString *urlA = [[@"filza://view/" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	NSString *encodedMessage = [messageCopy stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLPathAllowedCharacterSet]];
+	NSString *urlA = [@"filza://view/" stringByAppendingString:encodedMessage];
 	open2URL = ([messageCopy hasPrefix:@"/"] ) ? [NSURL URLWithString:urlA] : nil;
 	// 根据内容是否为路径（以 '/' 开头）决定是否显示跳转按钮
-	if ([messageCopy hasPrefix:@"/"]) {
-		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"复制", @"跳转", nil];
-		[alert show];
-	} else {
-		UIAlertView *alert = [[UIAlertView alloc] initWithTitle:title message:message delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"复制", nil];
-		[alert show];
-	}
-}
-
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-	// 0: 取消, 1: 复制, 2: 跳转
-	if (buttonIndex == 1) {
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+	[alert addAction:[UIAlertAction actionWithTitle:@"复制" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
 		UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
 		pasteboard.string = messageCopy;
-	} else if (buttonIndex == 2) {
+	}]];
+	if ([messageCopy hasPrefix:@"/"]) {
+		[alert addAction:[UIAlertAction actionWithTitle:@"跳转" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
 		NSURL *filzaURL = open2URL;
 		if (filzaURL && [[UIApplication sharedApplication] canOpenURL:filzaURL]) {
-			[[UIApplication sharedApplication] openURL:filzaURL];
+			[[UIApplication sharedApplication] openURL:filzaURL options:@{} completionHandler:nil];
 		} else {
-			NSString *urlF = [[@"fffff://view/" stringByAppendingString:messageCopy] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+			NSString *urlF = [@"fffff://view/" stringByAppendingString:encodedMessage];
 			NSURL *fffffURL = [NSURL URLWithString:urlF];
 			if (fffffURL) {
-				[[UIApplication sharedApplication] openURL:fffffURL];
+				[[UIApplication sharedApplication] openURL:fffffURL options:@{} completionHandler:nil];
 			}
 		}
+		}]];
 	}
+	[self presentViewController:alert animated:YES completion:nil];
 }
 
 #pragma mark -
