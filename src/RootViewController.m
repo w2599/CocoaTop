@@ -1,3 +1,4 @@
+#import "PrivilegedClient.h"
 #import "Compat.h"
 #import "RootViewController.h"
 #import "SockViewController.h"
@@ -562,9 +563,8 @@
 - (void)tableView:(UITableView *)tableView sendSignal:(int)sig toProcessAtIndexPath:(NSIndexPath *)indexPath
 {
 	PSProc *proc = procs[indexPath.row];
-	// task_for_pid(mach_task_self(), pid, &task)
-	// task_terminate(task)
-	if (kill(proc.pid, sig)) {
+	// 独立辅助进程处理跨用户信号，界面保持 mobile 身份。
+	if (CTSignalProcess(proc.pid, sig)) {
 		NSString *msg = [NSString stringWithFormat:@"Error %d while terminating app", errno];
 		UIAlertController *alert = [UIAlertController alertControllerWithTitle:proc.name message:msg preferredStyle:UIAlertControllerStyleAlert];
 		[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];

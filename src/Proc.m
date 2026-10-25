@@ -1,3 +1,4 @@
+#import "PrivilegedClient.h"
 #import <mach/mach_host.h>
 #import <mach/task_info.h>
 #import <mach/thread_info.h>
@@ -150,12 +151,12 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	[self updateMachInfo];
 	// Open files count
 	self.files = self.socks = 0;
-	int bufSize = proc_pidinfo(self.pid, PROC_PIDLISTFDS, 0, 0, 0);
+	int bufSize = CTProcPIDInfo(self.pid, PROC_PIDLISTFDS, 0, 0, 0);
 	if (bufSize > 0) {
 		bufSize *= 2;
 		struct proc_fdinfo *fdinfo = (struct proc_fdinfo *)malloc(bufSize);
 		if (fdinfo) {
-			bufSize = proc_pidinfo(self.pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
+			bufSize = CTProcPIDInfo(self.pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
 			if (bufSize > 0)
 				for (int i = 0; i < bufSize / PROC_PIDLISTFD_SIZE; i++) {
 					switch (fdinfo[i].proc_fdtype) {
@@ -178,7 +179,7 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	memset(&rusage, 0, sizeof(rusage));
 //#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_7_0
     if (@available(iOS 7, *)) {
-        if (proc_pid_rusage(self.pid, RUSAGE_INFO_V2, &rusage) == 0) {
+        if (CTProcPIDRusage(self.pid, RUSAGE_INFO_V2, &rusage) == 0) {
             if (!rusage_prev.ri_proc_start_abstime)
                 // Fill in rusage_prev on first update
                 memcpy(&rusage_prev, &rusage, sizeof(rusage_prev));
@@ -328,7 +329,6 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	int			nargs, c = 0;
 	static int	argmax = 0;
 	char		*argsbuf, *sp, *cp;
-	int			mib[3] = {CTL_KERN, KERN_PROCARGS2, ki->kp_proc.p_pid};
 	size_t		size;
 
 	if (!argmax) {
@@ -341,7 +341,7 @@ unsigned int mach_thread_priority(thread_t thread, policy_t policy)
 	argsbuf = (char *)malloc(argmax);
 	if (argsbuf) {
 		size = (size_t)argmax;
-		if (sysctl(mib, 3, argsbuf, &size, NULL, 0) == 0) {
+		if (CTProcArgs(ki->kp_proc.p_pid, argsbuf, &size) == 0) {
 			// Skip args count
 			nargs = *(int *)argsbuf;
 			cp = argsbuf + sizeof(nargs);

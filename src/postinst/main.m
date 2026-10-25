@@ -17,6 +17,6 @@ main(int argc, char *argv[], char *envp[]) {
         return 1;
     }
     chown(jbroot("/Applications/CocoaTop.app/CocoaTop"), 0, 0);
-    chmod(jbroot("/Applications/CocoaTop.app/CocoaTop"), 04755);
+    chmod(jbroot("/Applications/CocoaTop.app/CocoaTop"), 0755);
     return 0;
 }

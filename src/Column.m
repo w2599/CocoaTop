@@ -1,3 +1,4 @@
+#import "PrivilegedClient.h"
 #import "Compat.h"
 #import "Column.h"
 #import "Proc.h"
@@ -132,7 +133,7 @@ NSString *psSystemUptime()
 NSString *psProcessUptime(pid_t pid)
 {
 	struct proc_bsdinfo info = {0};
-	int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
+	int ret = CTProcPIDInfo(pid, PROC_PIDTBSDINFO, 0, &info, sizeof(info));
 	if (ret != sizeof(info))
 		return @"-1";
 

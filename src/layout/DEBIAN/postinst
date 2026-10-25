@@ -1,21 +1,27 @@
-#!/bin/bash
+#!/bin/sh
+set -e
 
 jbrootPath=""
-rootfsPath=""
-
 if [ -d "/.jbroot" ]; then
     jbrootPath="/.jbroot"
-    echo "Using /.jbroot as jbrootPath"
 elif [ -d "/var/jb" ]; then
     jbrootPath="/var/jb"
-    echo "Using /var/jb as jbrootPath"
 fi
 
-if [ -d "/rootfs" ]; then
-    rootfsPath="/rootfs"
-fi
+# 清除旧版提权位并结束旧进程，由系统以 mobile 重新打开。
+chmod 0755 "$jbrootPath/Applications/CocoaTop.app/CocoaTop" "$jbrootPath/Applications/CocoaTop.app/CocoaTopHelper"
+killall -9 CocoaTop CocoaTopHelper 2>/dev/null || true
 
-
-
-chown root:wheel $jbrootPath/Applications/CocoaTop.app/CocoaTop
-chmod +s $jbrootPath/Applications/CocoaTop.app/CocoaTop
+# 迁移旧版 root 创建的配置，仅调整本应用和共享注入配置的必要路径。
+for directory in "$jbrootPath/var/mobile/Library/Preferences" "$jbrootPath/var/mobile/Library/RootHide"; do
+    mkdir -p "$directory"
+    chown 501:501 "$directory"
+    chmod 0755 "$directory"
+done
+for file in "$jbrootPath/var/mobile/Library/Preferences/cn.zqbb.ccatop.whitelist.plist" "$jbrootPath/var/mobile/Library/RootHide/cn.zqbb.inject.plist"; do
+    if [ -f "$file" ]; then
+        chown 501:501 "$file"
+        chmod 0644 "$file"
+    fi
+done
+uicache -p "$jbrootPath/Applications/CocoaTop.app"

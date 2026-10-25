@@ -1,3 +1,4 @@
+#import "PrivilegedClient.h"
 #import "Sock.h"
 #import "ProcArray.h"
 #import <mach-o/dyld_images.h>
@@ -70,26 +71,10 @@ static UIColor *_greenColor() {
     }
 }
 
-kern_return_t
-_task_for_pid(pid_t pid, task_port_t *target) {
-	if (!target)
-		return KERN_INVALID_ARGUMENT;
-	*target = MACH_PORT_NULL;
-
-	typedef kern_return_t (*task_read_for_pid_t)(mach_port_t, pid_t, task_port_t *);
-	static task_read_for_pid_t taskReadForPid;
-	static dispatch_once_t onceToken;
-	dispatch_once(&onceToken, ^{
-		taskReadForPid = (task_read_for_pid_t)dlsym(RTLD_DEFAULT, "task_read_for_pid");
-	});
-
-	kern_return_t ret = taskReadForPid ? taskReadForPid(mach_task_self(), pid, target)
-		: task_for_pid(mach_task_self(), pid, target);
-	if (ret != KERN_SUCCESS && pid == 0 && !taskReadForPid)
-		ret = host_get_special_port(mach_host_self(), HOST_LOCAL_NODE, 4, target);
-	if (ret != KERN_SUCCESS || *target == MACH_PORT_NULL)
-		*target = MACH_PORT_NULL;
-	return ret;
+// 统一使用只读任务端口，跨用户读取由辅助进程授权。
+kern_return_t _task_for_pid(pid_t pid, task_port_t *target)
+{
+    return CTTaskForPID(pid, target);
 }
 
 NSString *psGetProcessName(struct extern_proc *ep)
@@ -275,7 +260,7 @@ void dump(unsigned char *b, int s)
 			// Get thread name
 			sock.name = @"-";
 			struct proc_threadinfo pth = {0};
-			proc_pidinfo(socks.proc.pid, PROC_PIDTHREADINFO, tii.thread_handle, &pth, sizeof(pth));
+			CTProcPIDInfo(socks.proc.pid, PROC_PIDTHREADINFO, tii.thread_handle, &pth, sizeof(pth));
 			if (pth.pth_name[0])
 				sock.name = [NSString stringWithUTF8String:pth.pth_name];
 			// Get dispatch queue name
@@ -349,7 +334,7 @@ void dump(unsigned char *b, int s)
 
 	if (type == PROX_FDTYPE_VNODE) {
 		struct vnode_fdinfowithpath info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDVNODEPATHINFO, &info, PROC_PIDFDVNODEPATHINFO_SIZE) != PROC_PIDFDVNODEPATHINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDVNODEPATHINFO, &info, PROC_PIDFDVNODEPATHINFO_SIZE) != PROC_PIDFDVNODEPATHINFO_SIZE)
 			return nil;
 		name = [[PSSymLink simplifyPathName:[NSString stringWithUTF8String:info.pvip.vip_path]] mutableCopy];
 		stype = "VNODE";
@@ -357,7 +342,7 @@ void dump(unsigned char *b, int s)
 		node = info.pvip.vip_vi.vi_stat.vst_ino;
 	} else if (type == PROX_FDTYPE_PIPE) {
 		struct pipe_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDPIPEINFO, &info, PROC_PIDFDPIPEINFO_SIZE) != PROC_PIDFDPIPEINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDPIPEINFO, &info, PROC_PIDFDPIPEINFO_SIZE) != PROC_PIDFDPIPEINFO_SIZE)
 			return nil;
 		NSString *partner = socks.objects[@(info.pipeinfo.pipe_peerhandle)];
 		name = [NSMutableString stringWithFormat:@"\u2192 %@", partner ? partner : @"<Unknown>"];
@@ -374,7 +359,7 @@ void dump(unsigned char *b, int s)
 		node = info.pipeinfo.pipe_handle;
 	} else if (type == PROX_FDTYPE_KQUEUE) {
 		struct kqueue_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDKQUEUEINFO, &info, PROC_PIDFDKQUEUEINFO_SIZE) != PROC_PIDFDKQUEUEINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDKQUEUEINFO, &info, PROC_PIDFDKQUEUEINFO_SIZE) != PROC_PIDFDKQUEUEINFO_SIZE)
 			return nil;
 		name = [info.kqueueinfo.kq_state & PROC_KQUEUE_64 ? @"KQUEUE64:" : info.kqueueinfo.kq_state & PROC_KQUEUE_32 ? @"KQUEUE32:" : @"KQUEUE:" mutableCopy];
 		if (info.kqueueinfo.kq_state & PROC_KQUEUE_SELECT)	[name appendString:@" SELECT"];
@@ -389,7 +374,7 @@ void dump(unsigned char *b, int s)
 		char lip[INET_ADDRSTRLEN] = "", fip[INET_ADDRSTRLEN] = "";
 		struct in_sockinfo *s;
 		struct socket_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDSOCKETINFO, &info, PROC_PIDFDSOCKETINFO_SIZE) != PROC_PIDFDSOCKETINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDSOCKETINFO, &info, PROC_PIDFDSOCKETINFO_SIZE) != PROC_PIDFDSOCKETINFO_SIZE)
 			return nil;
 		switch (info.psi.soi_kind) {
 		case SOCKINFO_TCP:	// Type: TCP
@@ -525,22 +510,22 @@ void dump(unsigned char *b, int s)
 		self.display = ProcDisplayUser;
 	if (self.type == PROX_FDTYPE_VNODE) {
 		struct vnode_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDVNODEINFO, &info, PROC_PIDFDVNODEINFO_SIZE) != PROC_PIDFDVNODEINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDVNODEINFO, &info, PROC_PIDFDVNODEINFO_SIZE) != PROC_PIDFDVNODEINFO_SIZE)
 			return NO;
 		return self.node == info.pvi.vi_stat.vst_ino;
 	} else if (self.type == PROX_FDTYPE_PIPE) {
 		struct pipe_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDPIPEINFO, &info, PROC_PIDFDPIPEINFO_SIZE) != PROC_PIDFDPIPEINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDPIPEINFO, &info, PROC_PIDFDPIPEINFO_SIZE) != PROC_PIDFDPIPEINFO_SIZE)
 			return NO;
 		return self.node == info.pipeinfo.pipe_handle;
 	} else if (self.type == PROX_FDTYPE_SOCKET) {
 		struct socket_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDSOCKETINFO, &info, PROC_PIDFDSOCKETINFO_SIZE) != PROC_PIDFDSOCKETINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDSOCKETINFO, &info, PROC_PIDFDSOCKETINFO_SIZE) != PROC_PIDFDSOCKETINFO_SIZE)
 			return NO;
 		return self.node == info.psi.soi_so;
 	} else if (self.type == PROX_FDTYPE_KQUEUE) {
 		struct kqueue_fdinfo info;
-		if (proc_pidfdinfo(pid, fd, PROC_PIDFDKQUEUEINFO, &info, PROC_PIDFDKQUEUEINFO_SIZE) != PROC_PIDFDKQUEUEINFO_SIZE)
+		if (CTProcPIDFDInfo(pid, fd, PROC_PIDFDKQUEUEINFO, &info, PROC_PIDFDKQUEUEINFO_SIZE) != PROC_PIDFDKQUEUEINFO_SIZE)
 			return NO;
 		if (self.node == info.kqueueinfo.kq_state)
 			return YES;
@@ -565,7 +550,7 @@ void dump(unsigned char *b, int s)
 	size_t bufSize = 0, curBufSize = 0;
 	for (int i = 0; i < procs->count; i++) {
 		struct extern_proc *ep = &procs->kp[i].kp_proc;
-		bufSize = proc_pidinfo(ep->p_pid, PROC_PIDLISTFDS, 0, 0, 0);
+		bufSize = CTProcPIDInfo(ep->p_pid, PROC_PIDLISTFDS, 0, 0, 0);
 		if (bufSize <= 0)
 			continue;
 		if (bufSize > curBufSize) {
@@ -576,19 +561,19 @@ void dump(unsigned char *b, int s)
 				return ENOMEM;
 			curBufSize = bufSize;
 		}
-		bufSize = proc_pidinfo(ep->p_pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
+		bufSize = CTProcPIDInfo(ep->p_pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
 		if (bufSize <= 0)
 			continue;
 		for (int j = 0; j < bufSize / PROC_PIDLISTFD_SIZE; j++) {
 			int32_t fd = fdinfo[j].proc_fd;
 			if (fdinfo[j].proc_fdtype == PROX_FDTYPE_PIPE) {
 				struct pipe_fdinfo info;
-				if (proc_pidfdinfo(ep->p_pid, fd, PROC_PIDFDPIPEINFO, &info, PROC_PIDFDPIPEINFO_SIZE) != PROC_PIDFDPIPEINFO_SIZE)
+				if (CTProcPIDFDInfo(ep->p_pid, fd, PROC_PIDFDPIPEINFO, &info, PROC_PIDFDPIPEINFO_SIZE) != PROC_PIDFDPIPEINFO_SIZE)
 					continue;
 				objects[@(info.pipeinfo.pipe_handle)] = [NSString stringWithFormat:@"[%@:%d]", psGetProcessName(ep), fd];
 			} else if (fdinfo[j].proc_fdtype == PROX_FDTYPE_SOCKET) {
 				struct socket_fdinfo info;
-				if (proc_pidfdinfo(ep->p_pid, fd, PROC_PIDFDSOCKETINFO, &info, PROC_PIDFDSOCKETINFO_SIZE) != PROC_PIDFDSOCKETINFO_SIZE)
+				if (CTProcPIDFDInfo(ep->p_pid, fd, PROC_PIDFDSOCKETINFO, &info, PROC_PIDFDSOCKETINFO_SIZE) != PROC_PIDFDSOCKETINFO_SIZE)
 					continue;
 				if (info.psi.soi_kind == SOCKINFO_UN && info.psi.soi_so)
 					objects[@(info.psi.soi_so)] = [NSString stringWithFormat:@"[%@:%d]", psGetProcessName(ep), fd];
@@ -606,7 +591,7 @@ void dump(unsigned char *b, int s)
 		[self getKernelObjects:socks.objects];
 	}
 	// Get buffer size
-	int bufSize = proc_pidinfo(socks.proc.pid, PROC_PIDLISTFDS, 0, 0, 0);
+	int bufSize = CTProcPIDInfo(socks.proc.pid, PROC_PIDLISTFDS, 0, 0, 0);
 	if (bufSize <= 0)
 		return EPERM;
 	// Make sure the buffer is large enough ;)
@@ -615,7 +600,7 @@ void dump(unsigned char *b, int s)
 	if (!fdinfo)
 		return ENOMEM;
 	// Get socket list and update the socks array
-	bufSize = proc_pidinfo(socks.proc.pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
+	bufSize = CTProcPIDInfo(socks.proc.pid, PROC_PIDLISTFDS, 0, fdinfo, bufSize);
 	if (bufSize > 0) {
 		int totalfds = bufSize / PROC_PIDLISTFD_SIZE;
 		for (int i = 0; i < totalfds; i++) {
@@ -1005,7 +990,7 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 					path = (mach_vm_address_t)ii32[i].imageFilePath;
 				}
 				struct proc_regionwithpathinfo rwpi;
-				if (proc_pidinfo(socks.proc.pid, PROC_PIDREGIONPATHINFO, addr, &rwpi, PROC_PIDREGIONPATHINFO_SIZE) != PROC_PIDREGIONPATHINFO_SIZE)
+				if (CTProcPIDInfo(socks.proc.pid, PROC_PIDREGIONPATHINFO, addr, &rwpi, PROC_PIDREGIONPATHINFO_SIZE) != PROC_PIDREGIONPATHINFO_SIZE)
 					continue;
 				if (strstr(rwpi.prp_vip.vip_path, "com.apple.dyld"))
 					continue;
@@ -1026,7 +1011,7 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 					sock = [PSSockModules psSockWithRwpi:&rwpi];
 					if (sock) {
 						while (rwpi.prp_prinfo.pri_size) {
-							if (proc_pidinfo(socks.proc.pid, PROC_PIDREGIONPATHINFO, rwpi.prp_prinfo.pri_address + rwpi.prp_prinfo.pri_size,
+							if (CTProcPIDInfo(socks.proc.pid, PROC_PIDREGIONPATHINFO, rwpi.prp_prinfo.pri_address + rwpi.prp_prinfo.pri_size,
 								&rwpi, PROC_PIDREGIONPATHINFO_SIZE) != PROC_PIDREGIONPATHINFO_SIZE) break;
 							if (rwpi.prp_vip.vip_vi.vi_stat.vst_dev && rwpi.prp_vip.vip_vi.vi_stat.vst_ino &&
 								(rwpi.prp_vip.vip_vi.vi_stat.vst_dev != sock.dev || rwpi.prp_vip.vip_vi.vi_stat.vst_ino != sock.ino))
