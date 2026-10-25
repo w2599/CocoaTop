@@ -73,7 +73,13 @@
 {
 	self = [super init];
 	if (self != nil) {
-		self.url = [[NSBundle mainBundle] URLForResource:url withExtension:@"html"];
+		NSString *preferredLanguage = [[NSLocale preferredLanguages] firstObject];
+		NSString *path = nil;
+		if ([preferredLanguage rangeOfString:@"zh"].location != NSNotFound)
+			path = [[NSBundle mainBundle] pathForResource:url ofType:@"html" inDirectory:@"zh-Hans.lproj"];
+		if (!path)
+			path = [[NSBundle mainBundle] pathForResource:url ofType:@"html"];
+		self.url = path ? [NSURL fileURLWithPath:path] : nil;
 		self.pageTitle = title;
 	}
 	return self;

@@ -209,7 +209,8 @@ static bool psIsUserApp(PSProc *proc)
 		}
 		if (label) {
 			// The cell label gets a shorter text (sock.name), but the summary page will get the full one
-			label.text = col.style & ColumnStyleTooLong ? sock.name : col.getData(sock);
+			NSString *value = col.style & ColumnStyleTooLong ? sock.name : col.getData(sock);
+			label.text = col.tag == 1000 ? NSLocalizedString(value, nil) : value;
 			if (col != columns[0])
 			label.textColor = sock.color;
 		}

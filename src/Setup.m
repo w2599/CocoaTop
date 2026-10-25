@@ -32,7 +32,7 @@
 - (void)viewWillAppear:(BOOL)animated
 {
 	[super viewWillAppear:animated];
-	self.navigationItem.title = @"Settings";
+	self.navigationItem.title = NSLocalizedString(@"Settings", nil);
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -42,7 +42,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
 {
-	return @"Choose";
+	return NSLocalizedString(@"Choose", nil);
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -55,14 +55,14 @@
 	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Setup"];
 	if (cell == nil)
 		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Setup"];
-	cell.textLabel.text = self.list[indexPath.row];
-	cell.accessoryType = [self.value isEqualToString:cell.textLabel.text] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
+	cell.textLabel.text = NSLocalizedString(self.list[indexPath.row], nil);
+	cell.accessoryType = [self.value isEqualToString:self.list[indexPath.row]] ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone;
 	return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-	self.value = [tableView cellForRowAtIndexPath:indexPath].textLabel.text;
+	self.value = self.list[indexPath.row];
 	[[CocoaTopPreferences sharedPreferences] setObject:self.value forKey:self.option];
 	[self.navigationController popViewControllerAnimated:YES];
 }
@@ -101,9 +101,9 @@
 
 - (IBAction)factoryReset
 {
-	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Reset" message:@"Reset settings to default values?" preferredStyle:UIAlertControllerStyleAlert];
-	[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-	[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+	UIAlertController *alert = [UIAlertController alertControllerWithTitle:NSLocalizedString(@"Reset", nil) message:NSLocalizedString(@"Reset settings to default values?", nil) preferredStyle:UIAlertControllerStyleAlert];
+	[alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", nil) style:UIAlertActionStyleCancel handler:nil]];
+	[alert addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"OK", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
 		[[CocoaTopPreferences sharedPreferences] reset];
 		[self.tableView reloadData];
 	}]];
@@ -113,18 +113,18 @@
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
-	self.navigationItem.title = @"Settings";
-	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Reset" style:UIBarButtonItemStylePlain
+	self.navigationItem.title = NSLocalizedString(@"Settings", nil);
+	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Reset", nil) style:UIBarButtonItemStylePlain
 		target:self action:@selector(factoryReset)];
 	optionsList = @[
-		[OptionItem withAccessory:[UILabel class] key:@"UpdateInterval" label:@"Update interval (seconds)" chooseFrom:@[@"0.5",@"1",@"2",@"3",@"5",@"10",@"Never"]],
-		[OptionItem withAccessory:[UILabel class] key:@"FirstColumnStyle" label:@"First column style" chooseFrom:@[@"Bundle Identifier",@"Bundle Name",@"Bundle Display Name",@"Executable Name",@"Executable With Args"]],
-		[OptionItem withAccessory:[UISwitch class] key:@"FullWidthCommandLine" label:@"Full width command line" chooseFrom:nil],
-		[OptionItem withAccessory:[UISwitch class] key:@"ShortenPaths" label:@"Show short (symlinked) paths" chooseFrom:nil],
-		[OptionItem withAccessory:[UISwitch class] key:@"AutoJumpNewProcess" label:@"Auto scroll to new/terminated processes" chooseFrom:nil],
-		[OptionItem withAccessory:[UISwitch class] key:@"ShowHeader" label:@"Show column sort header" chooseFrom:nil],
-		[OptionItem withAccessory:[UISwitch class] key:@"ShowFooter" label:@"Show column totals (footer)" chooseFrom:nil],
-		[OptionItem withAccessory:[UISwitch class] key:@"ColorDiffs" label:@"Highlight changing values" chooseFrom:nil],
+		[OptionItem withAccessory:[UILabel class] key:@"UpdateInterval" label:NSLocalizedString(@"Update interval (seconds)", nil) chooseFrom:@[@"0.5",@"1",@"2",@"3",@"5",@"10",@"Never"]],
+		[OptionItem withAccessory:[UILabel class] key:@"FirstColumnStyle" label:NSLocalizedString(@"First column style", nil) chooseFrom:@[@"Bundle Identifier",@"Bundle Name",@"Bundle Display Name",@"Executable Name",@"Executable With Args"]],
+		[OptionItem withAccessory:[UISwitch class] key:@"FullWidthCommandLine" label:NSLocalizedString(@"Full width command line", nil) chooseFrom:nil],
+		[OptionItem withAccessory:[UISwitch class] key:@"ShortenPaths" label:NSLocalizedString(@"Show short (symlinked) paths", nil) chooseFrom:nil],
+		[OptionItem withAccessory:[UISwitch class] key:@"AutoJumpNewProcess" label:NSLocalizedString(@"Auto scroll to new/terminated processes", nil) chooseFrom:nil],
+		[OptionItem withAccessory:[UISwitch class] key:@"ShowHeader" label:NSLocalizedString(@"Show column sort header", nil) chooseFrom:nil],
+		[OptionItem withAccessory:[UISwitch class] key:@"ShowFooter" label:NSLocalizedString(@"Show column totals (footer)", nil) chooseFrom:nil],
+		[OptionItem withAccessory:[UISwitch class] key:@"ColorDiffs" label:NSLocalizedString(@"Highlight changing values", nil) chooseFrom:nil],
 	];
 }
 
@@ -147,7 +147,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
 {
-	return @"General";
+	return NSLocalizedString(@"General", nil);
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -169,6 +169,9 @@
 	if (cell == nil)
 		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:rid];
 	OptionItem *option = optionsList[indexPath.row];
+	for (UIView *subview in [cell.contentView.subviews copy])
+		if ([subview isKindOfClass:[UILabel class]] && subview != cell.textLabel)
+			[subview removeFromSuperview];
 	cell.selectionStyle = UITableViewCellSelectionStyleNone;
 	cell.textLabel.text = option.label;
 	if (option.accessory == [UISwitch class]) {
@@ -184,19 +187,17 @@
 		if (option.accessory == [UILabel class]) {
 			cell.selectionStyle = UITableViewCellSelectionStyleBlue;
 			cell.contentView.autoresizesSubviews = YES;
-			UILabel *label = (UILabel *)[cell viewWithTag:indexPath.row + 1];
-			if (!label) {
-				label = [[UILabel alloc] initWithFrame:CGRectZero];
+			UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+			{
 				label.textAlignment = NSTextAlignmentRight;
 				label.font = [UIFont systemFontOfSize:16.0];
 				label.textColor = [UIColor grayColor];
 				label.backgroundColor = [UIColor clearColor];
-				label.text = [[CocoaTopPreferences sharedPreferences] objectForKey:option.optionKey];
+				label.text = NSLocalizedString([[CocoaTopPreferences sharedPreferences] objectForKey:option.optionKey], nil);
 				label.tag = indexPath.row + 1;
 				label.autoresizingMask = UIViewAutoresizingFlexibleRightMargin | UIViewAutoresizingFlexibleWidth;
 				[cell.contentView addSubview:label];
-			} else
-				label.text = [[CocoaTopPreferences sharedPreferences] objectForKey:option.optionKey];
+			}
 		}
 	}
 	return cell;

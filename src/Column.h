@@ -73,3 +73,5 @@ typedef double (^PSColumnFloat)(id proc);
 + (PSColumn *)psTaskColumnWithTag:(NSInteger)tag forMode:(column_mode_t)mode;
 
 @end
+
+NSString *PSLocalizedColumnDescription(PSColumn *column);

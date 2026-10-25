@@ -57,7 +57,7 @@
 	switch (item) {
 	case 0: view = [[SetupViewController alloc] initWithStyle:UITableViewStyleGrouped]; break;
 	case 1: view = [[SetupColsViewController alloc] initWithStyle:UITableViewStyleGrouped]; break;
-	case 2: view = [[HtmlViewController alloc] initWithURL:@"guide" title:@"Quick Guide"]; break;
+	case 2: view = [[HtmlViewController alloc] initWithURL:@"guide" title:NSLocalizedString(@"Quick Guide", nil)]; break;
 	case 3: view = [[HtmlViewController alloc] initWithURL:@"story" title:@"The Story"]; break;
 	}
 	if (view)
@@ -120,7 +120,7 @@
 	bool isPhone = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone;
 
 //	self.wantsFullScreenLayout = YES;
-	[self popupMenuWithItems:@[@"Settings", @"Columns", @"Quick Guide", @"About"] selected:-1 aligned:UIControlContentHorizontalAlignmentLeft];
+	[self popupMenuWithItems:@[NSLocalizedString(@"Settings", nil), NSLocalizedString(@"Columns", nil), NSLocalizedString(@"Quick Guide", nil), NSLocalizedString(@"About", nil)] selected:-1 aligned:UIControlContentHorizontalAlignmentLeft];
 	self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"UIButtonBarHamburger"] style:UIBarButtonItemStylePlain
 		target:self action:@selector(popupMenuToggle)];
 	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
@@ -204,12 +204,12 @@
 
 - (void)searchBarTextDidBeginEditing:(UISearchBar *)searchBar
 {
-	searchBar.placeholder = [NSString stringWithFormat:@"filter by %@ <tap another column>", filterColumn.fullname.lowercaseString];
+	searchBar.placeholder = [NSString localizedStringWithFormat:NSLocalizedString(@"filter by %@ <tap another column>", nil), filterColumn.fullname.lowercaseString];
 }
 
 - (void)searchBarTextDidEndEditing:(UISearchBar *)searchBar
 {
-	searchBar.placeholder = [NSString stringWithFormat:@"filter by %@", filterColumn.fullname.lowercaseString];
+	searchBar.placeholder = [NSString localizedStringWithFormat:NSLocalizedString(@"filter by %@", nil), filterColumn.fullname.lowercaseString];
 }
 
 - (void)searchBarSearchButtonClicked:(UISearchBar *)searchBar

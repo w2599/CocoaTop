@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="initial-scale=1;minimum-scale=1" />
+		<link rel="stylesheet" href="../style.css" type="text/css" />
+		<title></title>
+	</head>
+	<body>
+		<h1>快速指南</h1>
+		<panel>
+		<fieldset>
+        <ul>
+            <li>点击进程可查看详情，包括线程、打开的文件和套接字、已加载的模块及摘要。</li>
+            <li>点击列标题可按该列排序，再次点击可切换排序方向。</li>
+            <li>用两根手指触摸屏幕，可在全屏视图和普通视图之间切换。</li>
+            <li>绿色背景表示进程最近刚刚创建。</li>
+            <li>红色背景表示进程最近已经终止。</li>
+            <li>向左滑动可终止进程（TERM）或强制结束进程（<font color=red>KILL</font>）。SIGTERM 会让进程有机会自行退出；SIGKILL 会立即结束进程，因此按钮显示为红色。</li>
+            <li>数值增加时会以<font color=red>红色</font>突出显示，减少时会以<font color=blue>蓝色</font>突出显示。</li>
+            <li>列配置页面提供所有列及其总计值（底部数值）的说明，点击 (i) 图标即可查看。</li>
+        </ul>
+		</fieldset>
+		</panel>
+		<h1>进程详情：线程</h1>
+		<panel>
+		<fieldset>
+		<p>线程使用以下颜色表示状态：<br>
+		<font color=red>&#x25A0;</font> - 线程当前正在运行。<br>
+		<font color=orange>&#x25A0;</font> - 线程正在系统调用中等待 I/O（不可中断）。<br>
+		<font color=brown>&#x25A0;</font> - 线程已暂停或停止。<br>
+		<font color=blue>&#x25A0;</font> - 线程已挂起。<br>
+		<font color=black>&#x25A0;</font> - 线程处于空闲状态（休眠）。<br>
+		<font color=darkgray>&#x25A0;</font> - 线程状态未知。
+		</p>
+		<p>线程状态列中的小写“i”表示线程正在运行空闲循环（用于让 CPU 核心进入睡眠模式）。这类线程可以在内核任务中看到。</p>
+		</fieldset>
+		</panel>
+		<h1>进程详情：打开的文件和套接字</h1>
+		<panel>
+		<fieldset>
+		<p>打开的文件描述符使用以下颜色表示类型：<br>
+		<font color=black>&#x25A0;</font> - 普通文件。<br>
+		<font color=green>&#x25A0;</font> - 网络套接字（TCP 或 UDP）。<br>
+		<font color=blue>&#x25A0;</font> - UNIX 管道。<br>
+		<font color=brown>&#x25A0;</font> - UNIX 套接字或内核队列。<br>
+		<font color=orange>&#x25A0;</font> - 内核控制描述符。<br>
+		<font color=red>&#x25A0;</font> - 内核事件描述符。
+		</p>
+		</fieldset>
+		</panel>
+		<h1>进程详情：Mach 端口</h1>
+		<panel>
+		<fieldset>
+		<p>打开的端口使用以下颜色表示权限：<br>
+		<font color=green>&#x25A0;</font> - 此端口同时具有发送和接收权限。<br>
+		<font color=blue>&#x25A0;</font> - 此端口具有接收权限。<br>
+		<font color=black>&#x25A0;</font> - 此端口具有发送权限。
+		</p>
+		</fieldset>
+		</panel>
+		<h1>进程详情：已加载的模块</h1>
+		<panel>
+		<fieldset>
+		<p>已加载模块使用以下颜色表示来源：<br>
+		<font color=black>&#x25A0;</font> - 模块从 .dylib 文件加载，并显示映射大小和引用计数。<br>
+		<font color=darkgray>&#x25A0;</font> - 模块从动态库缓存加载。动态库缓存是一个包含所有内置系统库（私有库和公共库）的大文件，用于提升性能。
+		</p>
+		</fieldset>
+		</panel>
+	</body>
+</html>

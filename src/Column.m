@@ -783,3 +783,10 @@ NSString *psProcessCpuTime(unsigned int ptime)
 }
 
 @end
+
+NSString *PSLocalizedColumnDescription(PSColumn *column)
+{
+	NSString *key = [column.fullname stringByAppendingString:@" description"];
+	NSString *localized = NSLocalizedString(key, nil);
+	return [localized isEqualToString:key] ? column.descr : localized;
+}

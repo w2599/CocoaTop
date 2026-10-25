@@ -98,10 +98,12 @@ NSURL *open2URL;
 	//self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Back"
 	//	style: UIBarButtonItemStyleDone target:self action:@selector(backWithoutAnimation)];
 
-    self.navigationItem.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Back"
+	self.navigationItem.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Back", nil)
         style: UIBarButtonItemStyleDone target:self action:@selector(backWithoutAnimation)];
 	viewMode = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ProcInfoMode"] integerValue];
-	NSMutableArray *modeItems = [NSMutableArray arrayWithObjects:ColumnModeName count:ColumnModes];
+	NSMutableArray *modeItems = [NSMutableArray arrayWithCapacity:ColumnModes];
+	for (NSInteger mode = 0; mode < ColumnModes; mode++)
+		[modeItems addObject:NSLocalizedString(ColumnModeName[mode], nil)];
 	modeItems[ColumnModeThreads] = [modeItems[ColumnModeThreads] stringByAppendingFormat:@" (%u)", proc.threads];
 	modeItems[ColumnModeFiles  ] = [modeItems[ColumnModeFiles  ] stringByAppendingFormat:@" (%u)", proc.files];
 	modeItems[ColumnModePorts  ] = [modeItems[ColumnModePorts  ] stringByAppendingFormat:@" (%u)", proc.ports];
@@ -360,9 +362,9 @@ NSURL *open2URL;
 	PSSockSummary *sock = (PSSockSummary *)socks[indexPath.row];
 	if (!sock)
 		return;
-	NSString *title = (viewMode == ColumnModeSummary) ? sock.name : ColumnModeName[viewMode],
+	NSString *title = (viewMode == ColumnModeSummary) ? NSLocalizedString(sock.name, nil) : NSLocalizedString(ColumnModeName[viewMode], nil),
 	   *message = (viewMode == ColumnModeSummary) ? [NSString stringWithFormat:@"%@\n\n%@", sock.col.getData(sock.proc),
-	   [sock.col.descr substringWithRange:NSMakeRange(0, [sock.col.descr lineRangeForRange:NSMakeRange(0,1)].length-1)]] :
+	   PSLocalizedColumnDescription(sock.col)] :
 			  (viewMode == ColumnModeModules) ? sock.name : sock.description;
 	messageCopy = [(viewMode == ColumnModeSummary) ? sock.col.getData(sock.proc) : (viewMode == ColumnModeModules) ? sock.name : sock.description stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
 	if (viewMode == ColumnModePorts)

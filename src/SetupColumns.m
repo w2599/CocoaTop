@@ -113,7 +113,7 @@ static NSArray *presetNames;
 - (void)viewWillAppear:(BOOL)animated
 {
 	[super viewWillAppear:animated];
-	self.navigationItem.title = @"Column presets";
+	self.navigationItem.title = NSLocalizedString(@"Column presets", nil);
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -123,7 +123,7 @@ static NSArray *presetNames;
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
 {
-	return @"Select a column layout";
+	return NSLocalizedString(@"Select a column layout", nil);
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -137,11 +137,11 @@ static NSArray *presetNames;
 	if (cell == nil)
 		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"Preset"];
 	cell.textLabel.text = presetNames[indexPath.row];
-	NSString *colNames = @"Command";
+	NSString *colNames = NSLocalizedString(@"Command", nil);
 	for (NSNumber *idx in presetList[presetNames[indexPath.row]]) {
 		NSInteger i = [idx intValue];
 		PSColumn *col = i ? [PSColumn psColumnWithTag:i] : nil;
-		if (col) colNames = [colNames stringByAppendingFormat:@", %@", col.name];
+		if (col) colNames = [colNames stringByAppendingFormat:@", %@", NSLocalizedString(col.name, nil)];
 	}
 	cell.detailTextLabel.text = colNames;
 	return cell;
@@ -179,8 +179,8 @@ enum InOutCols {
 {
 	[super viewDidLoad];
 	self.tableView.editing = YES;
-	self.navigationItem.title = @"Manage columns";
-	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Presets" style:UIBarButtonItemStylePlain
+	self.navigationItem.title = NSLocalizedString(@"Manage columns", nil);
+	self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Presets", nil) style:UIBarButtonItemStylePlain
 		target:self action:@selector(openPresets)];
 }
 
@@ -214,12 +214,12 @@ enum InOutCols {
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
 {
-	return section == 0 ? @"Shown columns" : @"Inactive columns";
+	return section == 0 ? NSLocalizedString(@"Shown columns", nil) : NSLocalizedString(@"Inactive columns", nil);
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
 {
-	return section == 0 ? @"Only columns that fit will actually be shown" : nil;
+	return section == 0 ? NSLocalizedString(@"Only columns that fit will actually be shown", nil) : nil;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -231,7 +231,7 @@ enum InOutCols {
 {
 	[tableView selectRowAtIndexPath:src animated:YES scrollPosition:UITableViewScrollPositionNone];
 	PSColumn *col = cols[src.section][src.row];
-	[TextViewController showText:col.descr withTitle:col.fullname inViewController:self];
+	[TextViewController showText:PSLocalizedColumnDescription(col) withTitle:NSLocalizedString(col.fullname, nil) inViewController:self];
 //	[tableView deselectRowAtIndexPath:src animated:YES];
 }
 
@@ -243,7 +243,7 @@ enum InOutCols {
 	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:reuseId];
 	if (cell == nil)
 		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:reuseId];
-	cell.textLabel.text = ((PSColumn *)cols[src.section][src.row]).fullname;
+	cell.textLabel.text = NSLocalizedString(((PSColumn *)cols[src.section][src.row]).fullname, nil);
     if (@available(iOS 7, *)) {
         cell.editingAccessoryType = hasDecription ? UITableViewCellAccessoryDetailButton : UITableViewCellAccessoryNone;
     } else {
