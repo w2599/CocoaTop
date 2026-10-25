@@ -102,5 +102,6 @@
 - (NSUInteger)indexOfDisplayed:(display_t)display;
 - (NSUInteger)count;
 - (PSSock *)objectAtIndexedSubscript:(NSUInteger)idx;
-- (PSSock *)objectPassingTest:(BOOL (^)(id obj, NSUInteger idx, BOOL *stop))predicate;
+- (PSSock *)objectForIdentity:(uint64_t)identity;
+- (void)addObject:(PSSock *)object identity:(uint64_t)identity;
 @end

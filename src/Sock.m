@@ -237,12 +237,10 @@ void dump(unsigned char *b, int s)
 		info_count = THREAD_BASIC_INFO_COUNT;
 		thread_info(thread_list[j], THREAD_BASIC_INFO, (thread_info_t)&tbi, &info_count);
 		if (tii.thread_id) {
-			PSSockThreads *sock = (PSSockThreads *)[socks objectPassingTest:^BOOL(PSSockThreads *obj, NSUInteger idx, BOOL *stop) {
-				return obj.tid == tii.thread_id;
-			}];
+			PSSockThreads *sock = (PSSockThreads *)[socks objectForIdentity:tii.thread_id];
 			if (!sock) {
 				sock = [PSSockThreads psSockWithId:tii.thread_id];
-				if (sock) [socks.socks addObject:sock];
+				if (sock) [socks addObject:sock identity:tii.thread_id];
 			} else if (sock.display != ProcDisplayStarted)
 				sock.display = ProcDisplayUser;
 			sock->tbi = tbi;
@@ -604,16 +602,15 @@ void dump(unsigned char *b, int s)
 	if (bufSize > 0) {
 		int totalfds = bufSize / PROC_PIDLISTFD_SIZE;
 		for (int i = 0; i < totalfds; i++) {
-			PSSockFiles *sock = (PSSockFiles *)[socks objectPassingTest:^BOOL(PSSockFiles *obj, NSUInteger idx, BOOL *stop) {
-				return obj.fd == fdinfo[i].proc_fd && obj.type == fdinfo[i].proc_fdtype;
-			}];
+			uint64_t identity = ((uint64_t)(uint32_t)fdinfo[i].proc_fd << 32) | fdinfo[i].proc_fdtype;
+			PSSockFiles *sock = (PSSockFiles *)[socks objectForIdentity:identity];
 			if (!sock) {
 				sock = [PSSockFiles psSock:socks fd:fdinfo[i].proc_fd type:fdinfo[i].proc_fdtype];
-				if (sock) [socks.socks addObject:sock];
+				if (sock) [socks addObject:sock identity:identity];
 			} else if (![sock updateWithPid:socks.proc.pid fd:fdinfo[i].proc_fd]) {
 				sock.display = ProcDisplayTerminated;
 				PSSockFiles *newsock = [PSSockFiles psSock:socks fd:fdinfo[i].proc_fd type:fdinfo[i].proc_fdtype];
-				if (newsock) [socks.socks addObject:newsock];
+				if (newsock) [socks addObject:newsock identity:identity];
 			}
 		}
 	}
@@ -827,13 +824,11 @@ const char *port_types[] = {"","(thread)","(task)","(host)","(host priv)","(proc
 	for (mach_msg_type_number_t i = 0; i < myports->count; i++) {
 		natural_t object = myports->table[i].iin_object;
 		if (object) {
-			PSSockPorts *sock = (PSSockPorts *)[socks objectPassingTest:^BOOL(PSSockPorts *obj, NSUInteger idx, BOOL *stop) {
-				return obj.object == object;
-			}];
+			PSSockPorts *sock = (PSSockPorts *)[socks objectForIdentity:object];
 			if (!sock) {
 				sock = [PSSockPorts psSockWithTask:myports->task ipcInfo:&myports->table[i] name:socks.objects[@(object)]];
 				if (sock) {
-					[socks.socks addObject:sock];
+					[socks addObject:sock identity:object];
 					newPorts[@(object)] = sock;
 				}
 			} else if (sock.display != ProcDisplayStarted)
@@ -994,9 +989,7 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 					continue;
 				if (strstr(rwpi.prp_vip.vip_path, "com.apple.dyld"))
 					continue;
-				PSSockModules *sock = (PSSockModules *)[socks objectPassingTest:^BOOL(PSSockModules *obj, NSUInteger idx, BOOL *stop) {
-					return obj.addr == addr;
-				}];
+				PSSockModules *sock = (PSSockModules *)[socks objectForIdentity:addr];
 				if (!sock) {
 					// dyld cache has the info that proc_pidinfo doesn't give
 					if (!rwpi.prp_vip.vip_path[0]) {
@@ -1020,7 +1013,7 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 								break;
 							sock.size += rwpi.prp_prinfo.pri_size;
 						}
-						[socks.socks addObject:sock];
+						[socks addObject:sock identity:addr];
 					}
 				} else if (sock.display != ProcDisplayStarted)
 					sock.display = ProcDisplayUser;
@@ -1038,6 +1031,9 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 //  PSSockArray
 
 @implementation PSSockArray
+{
+    NSMutableDictionary<NSNumber *, PSSock *> *itemsByIdentity;
+}
 
 - (instancetype)initSockArrayWithProc:(PSProc *)proc
 {
@@ -1053,12 +1049,31 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 	return [[PSSockArray alloc] initSockArrayWithProc:proc];
 }
 
+// 为当前详情建立身份索引，避免每个条目重复扫描整张表。
 - (int)refreshWithMode:(column_mode_t)mode
 {
 	// Remove closed sockets
 	[self.socks filterUsingPredicate:[NSPredicate predicateWithBlock: ^BOOL(PSSock *obj, NSDictionary *bind) {
 		return obj.display != ProcDisplayTerminated;
 	}]];
+    if (!itemsByIdentity) itemsByIdentity = [NSMutableDictionary dictionaryWithCapacity:self.socks.count];
+    [itemsByIdentity removeAllObjects];
+    for (PSSock *item in self.socks) {
+        uint64_t identity;
+        switch (mode) {
+            case ColumnModeThreads: identity = ((PSSockThreads *)item).tid; break;
+            case ColumnModeFiles: {
+                PSSockFiles *file = (PSSockFiles *)item;
+                identity = ((uint64_t)(uint32_t)file.fd << 32) | file.type;
+                break;
+            }
+            case ColumnModePorts: identity = ((PSSockPorts *)item).object; break;
+            case ColumnModeModules: identity = ((PSSockModules *)item).addr; break;
+            default: continue;
+        }
+        // 保持原来的首次匹配语义。
+        if (!itemsByIdentity[@(identity)]) itemsByIdentity[@(identity)] = item;
+    }
 	[self setAllDisplayed:ProcDisplayTerminated];
 	Class ModeClass[ColumnModes] = {[PSSockSummary class], [PSSockThreads class], [PSSockFiles class], [PSSockPorts class], [PSSockModules class]};
 	return [ModeClass[mode] refreshArray:self];
@@ -1097,10 +1112,17 @@ CFDictionaryRef (*OSKextCopyLoadedKextInfo)(CFArrayRef kextIdentifiers, CFArrayR
 	return (PSSock *)self.socks[idx];
 }
 
-- (PSSock *)objectPassingTest:(BOOL (^)(id obj, NSUInteger idx, BOOL *stop))predicate
+// 按线程、文件、端口或模块的稳定标识查找已有条目。
+- (PSSock *)objectForIdentity:(uint64_t)identity
 {
-	NSUInteger idx = [self.socks indexOfObjectPassingTest:predicate];
-	return idx == NSNotFound ? nil : (PSSock *)self.socks[idx];
+    return itemsByIdentity[@(identity)];
+}
+
+// 新条目立即入索引，同轮遇到重复内核对象时仍复用首条记录。
+- (void)addObject:(PSSock *)object identity:(uint64_t)identity
+{
+    [self.socks addObject:object];
+    if (!itemsByIdentity[@(identity)]) itemsByIdentity[@(identity)] = object;
 }
 
 @end
