@@ -61,6 +61,20 @@
 @end
 */
 
+static bool psIsUserApp(PSProc *proc)
+{
+	if (!proc.app || !proc.executable)
+		return false;
+	
+	NSString *executable = proc.executable;
+	BOOL isContainersBundleApplication = [executable containsString:@"/var/containers/Bundle/Application/"];
+	BOOL isAppPlugins = [executable containsString:@"/var/containers/Bundle/Application/"] && [executable containsString:@"/PlugIns/"];
+	
+	if (isContainersBundleApplication && !isAppPlugins) {
+		return true;
+	}
+	return false;
+}
 
 
 @implementation GridTableCell
@@ -154,6 +168,13 @@
 - (void)updateWithProc:(PSProc *)proc columns:(NSArray *)columns
 {
 	self.textLabel.text = proc.name;
+	if (proc.uid == 0) {
+		self.textLabel.textColor = [UIColor colorWithRed:0.55 green:0.55 blue:1.0 alpha:1.0];
+	} else if (psIsUserApp(proc)) {
+		self.textLabel.textColor = [UIColor colorWithRed:0.12 green:0.5 blue:0.12 alpha:1.0];
+	}else if(@available(iOS 13, *)) {
+		self.textLabel.textColor = [UIColor labelColor];
+	}
 	self.detailTextLabel.text = [proc.executable stringByAppendingString:proc.args];
 	if (proc.icon)
 		self.imageView.image = proc.icon;
