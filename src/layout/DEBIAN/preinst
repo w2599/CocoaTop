@@ -1,0 +1,18 @@
+#!/bin/bash
+
+jbrootPath=""
+rootfsPath=""
+
+if [ -d "/.jbroot" ]; then
+    jbrootPath="/.jbroot"
+    echo "Using /.jbroot as jbrootPath"
+elif [ -d "/var/jb" ]; then
+    jbrootPath="/var/jb"
+    echo "Using /var/jb as jbrootPath"
+fi
+
+if [ -d "/rootfs" ]; then
+    rootfsPath="/rootfs"
+fi
+
+uicache -u $jbrootPath/Applications/CocoaTop.app

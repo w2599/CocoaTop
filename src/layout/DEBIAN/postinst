@@ -1,3 +1,21 @@
 #!/bin/bash
-chown root.wheel /Applications/CocoaTop.app/CocoaTop
-chmod +s /Applications/CocoaTop.app/CocoaTop
+
+jbrootPath=""
+rootfsPath=""
+
+if [ -d "/.jbroot" ]; then
+    jbrootPath="/.jbroot"
+    echo "Using /.jbroot as jbrootPath"
+elif [ -d "/var/jb" ]; then
+    jbrootPath="/var/jb"
+    echo "Using /var/jb as jbrootPath"
+fi
+
+if [ -d "/rootfs" ]; then
+    rootfsPath="/rootfs"
+fi
+
+
+
+chown root:wheel $jbrootPath/Applications/CocoaTop.app/CocoaTop
+chmod +s $jbrootPath/Applications/CocoaTop.app/CocoaTop
