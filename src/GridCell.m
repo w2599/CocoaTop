@@ -1,6 +1,7 @@
 #import <objc/runtime.h>
 #import "Compat.h"
 #import "GridCell.h"
+#import "CocoaTopPreferences.h"
 
 /*
 @interface SmallGraph : UIView
@@ -95,8 +96,8 @@
 	// Create new views
 	self.labels = [NSMutableArray arrayWithCapacity:columns.count-1];
 	self.dividers = [NSMutableArray arrayWithCapacity:columns.count];
-	self.extendArgsLabel = [[NSUserDefaults standardUserDefaults] boolForKey:@"FullWidthCommandLine"];
-	self.colorDiffs = [[NSUserDefaults standardUserDefaults] boolForKey:@"ColorDiffs"];
+	self.extendArgsLabel = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"FullWidthCommandLine"] boolValue];
+	self.colorDiffs = [[[CocoaTopPreferences sharedPreferences] objectForKey:@"ColorDiffs"] boolValue];
 	self.textLabel.font = size.height > 40 ? [UIFont systemFontOfSize:18.0] : [UIFont systemFontOfSize:12.0];
 	if (size.height > 40 && self.extendArgsLabel)
 		size.height /= 2;

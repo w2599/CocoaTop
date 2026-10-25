@@ -3,6 +3,7 @@
 #import "Proc.h"
 #import "ProcArray.h"
 #import "Sock.h"
+#import "CocoaTopPreferences.h"
 #import <pwd.h>
 #import <grp.h>
 #import <sys/stat.h>
@@ -560,7 +561,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_diskio_byteswritten); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_diskio_byteswritten); }
 			descr:@"Bytes written to disk since process launch."],
-		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Total Process Running Time" align:NSTextAlignmentRight width:75 tag:29 style:ColumnStyleColor
+		[PSColumn psColumnWithName:@"\u03A3Time" fullname:@"Total Process Running Time" align:NSTextAlignmentRight width:60 tag:29 style:ColumnStyleColor
 			data:^NSString*(PSProc *proc) { return psProcessUptime(proc->rusage.ri_proc_start_abstime, proc->rusage.ri_proc_exit_abstime); }
 			sort:^NSComparisonResult(PSProc *a, PSProc *b) { COMPARE_VAR(rusage.ri_proc_start_abstime); } summary:nil
 			color:^UIColor*(PSProc *proc) { DIFF_VAR(rusage.ri_proc_start_abstime); }
@@ -577,7 +578,7 @@ NSString *psProcessCpuTime(unsigned int ptime)
 
 + (NSMutableArray *)psGetShownColumnsWithWidth:(NSUInteger)width
 {
-	NSArray *columnOrder = [[NSUserDefaults standardUserDefaults] arrayForKey:@"Columns"];
+	NSArray *columnOrder = [[CocoaTopPreferences sharedPreferences] objectForKey:@"Columns"];
 	NSMutableArray *shownCols = [NSMutableArray array];
 	PSColumn *extendedcol = nil;
 	// Sanity check
